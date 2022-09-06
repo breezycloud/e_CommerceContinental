@@ -1,0 +1,129 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body, html{
+    height: 100%;
+}
+.loader-container {
+    width: 100%;
+    min-height: 100vh;
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -moz-box;
+    display: -ms-flexbox;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    background: white;
+}
+
+.loader-main {
+    display: flex;
+    justify-content: center;
+    justify-items: center;
+    align-items: center;
+    align-content: center;
+    width: auto;
+    height: 50px;
+    overflow: hidden;
+    background: white;
+    padding: 15px;
+}
+
+.loader {
+    display: inline-block;
+    width: 350px;
+    height: 20px;
+    border-radius: 40px;
+    background-color: rgba(255, 255, 255, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.loader::before{
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(350deg, #1D73BD, #a5c0f3);
+    border-radius: inherit;
+    transform: scaleX(0);
+    transform-origin: left;
+    animation: scale 1s infinite;
+}
+
+@keyframes scale {
+    50% {
+        transform: scaleX(1);
+    }
+    100% {
+        transform: scaleX(0);
+        transform-origin: right;
+    }
+}
+
+.inapp-loader-container{
+    height: 50vh;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.inapp-main-loader {
+    display: flex;
+    width: 200px;
+    justify-content: space-between;
+    align-items: center;
+}
+.inapp-loader {
+    width: 48px;
+    height: 48px;
+    display: block;
+    margin:15px auto;
+    position: relative;
+    color: #a5c0f3;
+    box-sizing: border-box;
+    animation: rotation 1s linear infinite;
+  }
+  .inapp-loader::after,
+  .inapp-loader::before {
+    content: '';  
+    box-sizing: border-box;
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    top: 50%;
+    left: 50%;
+    transform: scale(0.5) translate(0, 0);
+    background-color: #a5c0f3;
+    border-radius: 50%;
+    animation: animloader 1s infinite ease-in-out;
+  }
+  .inapp-loader::before {
+    background-color: #1D73BD;
+    transform: scale(0.5) translate(-48px, -48px);
+  }
+  
+  @keyframes rotation {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  } 
+  @keyframes animloader {
+      50% {
+        transform: scale(1) translate(-50%, -50%);
+  }
+  }
+      

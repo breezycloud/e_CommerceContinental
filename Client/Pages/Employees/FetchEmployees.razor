@@ -1,0 +1,106 @@
+@page "/employees"
+@using Settings.Menus
+@layout AppLayout
+@attribute [Authorize]
+
+
+<MudText Typo="Typo.h5">Manage Employee</MudText>
+@if (employees == null)
+{
+    <Loader/>
+}
+else
+{
+    <MudTable Items="@employees" Elevation="2" Dense="true" Outlined="true" Hover="true" Virtualize="true"    
+        Filter="new Func<Employee, bool>(SearchEmployee)">
+        <ToolBarContent>
+            <MudText Typo="@Typo.h6">Employee</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="searchString" Immediate="true" Placeholder="Search" Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>First Name</MudTh>
+            <MudTh>Last Name</MudTh>
+            <MudTh>DOB</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Phone No</MudTh>
+            <MudTh>Branch</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="First Name">@context.FirstName</MudTd>
+            <MudTd DataLabel="Last Name">@context.LastName</MudTd>
+            <MudTd DataLabel="DOB">@string.Format("{0}/{1}", context.Bday, context.Bmonth)</MudTd>
+            <MudTd DataLabel="Email">@context.Email</MudTd>
+            <MudTd DataLabel="Phone No">@context.PhoneNo</MudTd>
+            <MudTd DataLabel="Branch">@context!.Branch!.BranchName</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudTooltip Text="Edit" Duration="1000" Placement="Placement.Top">
+                    <MudFab Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                            OnClick="@(() => Edit(context))" IconSize="Size.Small" Color="Color.Info" />
+                </MudTooltip>
+                @if (context.EmployeeAccount is not null)
+                {
+                    <MudTooltip Text="Set User Access" Duration="1000" Placement="Placement.Top">
+                        <MudFab Icon="@Icons.Material.Filled.Key" Size="Size.Small"
+                                OnClick="@(() => Dialog.Show<UserPersmissionEntry>("", parameters: new DialogParameters {["Employee"] = context}))"
+                                IconSize="Size.Small" Color="Color.Warning" />
+                    </MudTooltip>
+                }                
+                <MudTooltip Text="Delete" Placement="Placement.Top">
+                    <MudFab Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Disabled="@isDeleting"
+                            OnClick="@(() => Delete(context))" IconSize="Size.Small" Color="Color.Error" />
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+
+    <div class="fabs-container">
+        <MudFab OnClick="@(() => nav.NavigateTo("newemployee"))" Class="fab" Color="Color.Primary" Icon="@Icons.Material.Filled.Add" />        
+    </div>
+}
+
+@code {
+    private bool isDeleting = false;
+    private Employee[]? employees;
+    private Employee? employee;
+
+    private string searchString = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        employees = await EmployeeService.GetEmployees();
+    }
+
+    void Edit(Employee employee)
+    {
+        nav.NavigateTo($"editemployee/{employee.Id}");
+    }
+
+    async Task Delete(Employee employee)
+    {
+        await Dialog.ShowMessageBox("Confirmation", "Do you wish to delete", yesText:"Yes", cancelText:"No");
+    }
+
+    private bool SearchEmployee(Employee employee)
+    {
+        if (string.IsNullOrEmpty(searchString))
+            return true;
+        if (employee!.FirstName!.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (employee!.LastName!.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (employee.PhoneNo is not null)
+            if (employee.PhoneNo.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+                return true;                    
+        if (employee!.Branch is not null)                    
+            if (employee!.Branch!.BranchName!.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+                return true;                            
+        return false;
+    }
+
+}

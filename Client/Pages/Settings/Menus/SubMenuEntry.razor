@@ -1,0 +1,90 @@
+<EditForm Model="SubMenu" OnValidSubmit="AddMenu">
+    <DataAnnotationsValidator/>
+    <MudDialog Options="@DialogOptions">
+        <TitleContent>
+            <MudText Typo="Typo.h6">            
+                Sub Menu Entry
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudStack Spacing="2">
+                <MudText>Menu Details</MudText>  
+                <MudTextField Style="text-align:center;" Value="@SubMenu!.Menu!.Order" Variant="Variant.Outlined" Label="Order" ReadOnly="true"/>                              
+                <MudTextField @bind-Value="SubMenu!.Menu!.MenuName" Label="Menu Name" Variant="Variant.Outlined" ReadOnly="true" />
+                <MudTextField @bind-Value="SubMenu!.Menu!.ModifiedDate" Style="text-align:center;" Label="Last Modified" Variant="Variant.Outlined" ReadOnly="true"/>                
+                <MudText>Sub Menu Details</MudText>
+                <MudTextField @bind-Value="TotalMenus" Variant="Variant.Outlined" Label="Order" ReadOnly="true"/>
+                <MudTextField @bind-Value="SubMenu!.SubMenuName" Style="text-align:center;" Label="Menu Order" Variant="Variant.Outlined" For="@(() => SubMenu!.SubMenuName)"/>                
+            </MudStack>        
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="CloseMenuDialog" Disabled="@isProcessing" Variant="Variant.Text" Color="Color.Default" Class="px-10">Cancel</MudButton>
+            <MudButton ButtonType="ButtonType.Submit" Disabled="@isProcessing" Variant="Variant.Filled" Color="Color.Primary" Class="px-10">@(isProcessing ? "Processing" : "Save")</MudButton>
+        </DialogActions>    
+    </MudDialog>
+</EditForm>
+
+@code {    
+    [CascadingParameter] MudDialogInstance? DialogInstance { get; set; }
+    [Parameter] public Menu? menu { get; set; } = new();
+    [Parameter] public SubMenu? SubMenu { get; set; } = new();
+    [Parameter] public int TotalMenus { get; set; }
+    [Parameter] public bool SaveType { get; set; } = false;
+    private bool isProcessing { get; set; } = false;
+    DialogOptions DialogOptions = new DialogOptions
+    {
+        CloseButton = true,
+        CloseOnEscapeKey = true
+    };  
+    private HubConnection? hub;
+    protected override async Task OnParametersSetAsync()
+    {
+        hub = new HubConnectionBuilder().WithUrl(nav.ToAbsoluteUri("/hubs")).WithAutomaticReconnect().Build();
+        await hub!.StartAsync();        
+        SubMenu!.Menu = menu;
+        TotalMenus = SaveType ? TotalMenus : SubMenu.Order;
+    }
+
+    void CloseMenuDialog() => DialogInstance?.Cancel();
+    private async Task AddMenu()
+    {
+        var prompt = await Dialog.ShowMessageBox("Confirmation", "Do you wish save?", yesText:"Yes", cancelText:"No");
+        if (prompt is null || !prompt.Value)
+        {
+            isProcessing = false;
+            return;
+        }
+        var success = false;
+        try
+        {
+            SubMenu!.Menu = null;
+            SubMenu.MenuID = menu!.Id;
+            if (SaveType)
+            {                
+                success = await MenuService.AddSubMenu(SubMenu!);
+                TotalMenus++;
+            }                
+            else
+            {                
+                success = await MenuService.EditSubMenu(SubMenu!);
+            }
+            if (success)
+            {
+                snackBar.Add("Sub Menu Successfully Saved", Severity.Success);
+                await hub!.SendAsync("UpdateMenusData");
+                menu = new();
+            }
+            else
+            {
+                snackBar.Add("Error Occurred While Saving", Severity.Error);
+                nav.NavigateTo("accesslevels");
+            }
+        }
+        catch (Exception ex)
+        {
+            snackBar.Add("Error Occurred While Saving", Severity.Error);
+            isProcessing = false;
+            Console.WriteLine(ex);
+        }
+    }
+}

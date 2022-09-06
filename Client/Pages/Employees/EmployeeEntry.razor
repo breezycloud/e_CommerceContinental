@@ -1,0 +1,253 @@
+@page "/newemployee"
+@page "/editemployee/{id:guid}"
+@layout AppLayout
+@attribute [Authorize]
+
+
+<PageTitle>Employee</PageTitle>
+
+@if (isLoading)
+{
+    <Loader/>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Medium">
+        <EditForm Model="@employee" OnValidSubmit="@SaveChanges">
+            <DataAnnotationsValidator/>
+            <MudGrid Spacing="2">
+                <MudItem xs="12">
+                    <div class="d-flex flex-column align-center justify-center pa-4">
+                        <MudImage Src="@string.Format("data:image/png;base64,{0}",employee.ImageBase64)" Width="200" Height="200" Alt="Employee picture" Elevation="1"  Class="rounded-lg ma-4">
+                        </MudImage>
+                        <InputFile id="fileInput112" OnChange="UploadFiles" hidden accept=".jpeg" />
+                        <MudIconButton HtmlTag="label" Variant="Variant.Filled" Color="Color.Secondary" for="fileInput112" Icon="@Icons.Material.Outlined.CloudUpload"/>
+                    </div>            
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="employee.FirstName" Variant="Variant.Outlined" Label="First Name" For="@(() => employee.FirstName)"/>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="employee.LastName" Variant="Variant.Outlined" Label="Last Name" For="@(() => employee.LastName)"/>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="employee.PhoneNo" Variant="Variant.Outlined" Label="Phone No" For="@(() => employee.PhoneNo)"/>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="employee.Email" Variant="Variant.Outlined" Label="Email" For="@(() => employee.Email)"/>
+                </MudItem>
+                <MudItem xs="12" sm="6">                    
+                    <MudTextField @bind-Value="employee.HomeAddress" Variant="Variant.Outlined" Label="Home Address" For="@(() => employee.HomeAddress)"/>
+                </MudItem>            
+                <MudItem xs="12" sm="6">
+                    <div class="d-flex flex-row align-center justify-between">
+                        <MudNumericField T="int" Class="mr-3" @bind-Value="@employee.Bday" Variant="Variant.Outlined" Label="Birth Day" Max="31"/>
+                        <MudNumericField T="int" Class="ml-3" @bind-Value="@employee.Bmonth" Variant="Variant.Outlined" Label="Birth Month" Max="12"/>
+                    </div>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid" Dense="true" AnchorOrigin="Origin.BottomCenter" Strict="true" Value="employee.BranchID" ValueChanged="@OnBranchChanged"
+                        Direction="Direction.Bottom" OffsetY="true" Label="Branch" Variant="Variant.Outlined">
+                        @foreach (Branch branch in branches)
+                        {
+                            <MudSelectItem Value="@(branch.Id)">@branch.BranchName</MudSelectItem>
+                        }
+                    </MudSelect>            
+                </MudItem>                        
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="employee.Salary" Format="N2" Variant="Variant.Outlined" Label="Salary" For="@(() => employee.Salary)"/>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect Dense="true" AnchorOrigin="Origin.BottomCenter" Strict="true" @bind-Value="employee.BankID" Direction="Direction.Bottom" OffsetY="true" Label="Bank" Variant="Variant.Outlined">
+                        @foreach (Bank bank in banks!)
+                        {
+                            <MudSelectItem Value="@(bank.Id)">@bank.BankName</MudSelectItem>
+                        }
+                    </MudSelect>            
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="employee.AccountNo" Variant="Variant.Outlined" Label="Account Number" For="@(() => employee.AccountNo)"/>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="employee.AccountName" Variant="Variant.Outlined" Label="Account Name" For="@(() => employee.AccountName)"/>
+                </MudItem>  
+                <MudItem xs="12" sm="6">
+                    <MudCheckBox @bind-Checked="canLogin" Label="Allow Login Access" Color="Color.Secondary"></MudCheckBox>
+                </MudItem>       
+                <MudItem xs="12" sm="6" Style="@(canLogin ? "visibility:visible;" : "visibility:hidden")">
+                    <MudTextField @bind-Value="employee!.EmployeeAccount!.Username" Variant="Variant.Outlined" Label="Username" For="@(() => employee.AccountName)"/>
+                </MudItem>
+                <MudItem xs="12" sm="6" Style="@(canLogin ? "visibility:visible;" : "visibility:hidden")">
+                    <MudSelect Dense="true" AnchorOrigin="Origin.BottomCenter" Strict="true" @bind-Value="employee!.EmployeeAccount!.RoleId" Direction="Direction.Bottom" OffsetY="true" Label="Role" Variant="Variant.Outlined">
+                        @foreach (Role role in roles!)
+                        {
+                            <MudSelectItem Value="@(role.RoleId)">@role.RoleType</MudSelectItem>
+                        }
+                    </MudSelect>            
+                </MudItem>                                                                                      
+                <MudItem xs="12" sm="6" Style="@(canLogin ? "visibility:visible;" : "visibility:hidden")">
+                    <MudSelect T="Guid" Dense="true" AnchorOrigin="Origin.BottomCenter" Strict="true" Value="ShopID" ValueChanged="@OnShopChanged" Direction="Direction.Bottom" OffsetY="true" Label="Shop" Variant="Variant.Outlined">
+                        @foreach (Shop shop in shops!)
+                        {
+                            <MudSelectItem Value="@(shop.Id)">@shop.ShopName</MudSelectItem>
+                        }
+                    </MudSelect>            
+                </MudItem>  
+                <MudItem xs="12" sm="6" />
+                <MudItem xs="12" sm="6">
+                    <div class="d-flex align-center justify-center pa-3">
+                        <MudTooltip Text="Back to Employees" Placement="Placement.Top">
+                            <MudFab Label="Back" Variant="Variant.Text" Size="Size.Medium" OnClick="@(() => nav.NavigateTo("employees"))" Style="width:200px;"/>
+                        </MudTooltip>
+                    </div>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <div class="d-flex align-center justify-center pa-3">
+                        <MudTooltip Text="Save" Placement="Placement.Top">
+                            <MudFab ButtonType="ButtonType.Submit" Disabled="@isProcessing" Size="Size.Medium" Label="@((isProcessing ? "Processing" : "Save"))" Variant="Variant.Outlined" Color="Color.Primary" Style="width:200px;"/>
+                        </MudTooltip>
+                    </div>
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+    </MudContainer>
+}
+
+@code {
+    private bool isLoading, isProcessing = false;
+    private bool canLogin { get; set; } = false;
+    [Parameter] public Guid id { get; set; }
+    public  bool isAdd => Guid.Equals(id, Guid.Empty) ? true : false;
+    private bool Operation => Guid.Equals(id, Guid.Empty) ? true : false;
+    private Bank[]? banks;
+    private Role[]? roles = Array.Empty<Role>();
+    private Shop[]? shops = Array.Empty<Shop>();
+    private Branch[] branches = Array.Empty<Branch>();
+    private Employee employee = new();
+    private EmployeeAccount employeeAccount = new();
+    Guid ShopID;
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        branches = await BranchService.GetBranches();        
+        banks = await BankService.GetBanks();
+        await GetRoles();
+        if (!isAdd)
+        {
+            employee = await EmployeeService.GetEmployee(id);
+            canLogin = employee.EmployeeAccount is not null ? true : false;
+        }
+        isLoading = false;
+    }
+
+    async Task GetRoles()
+    {
+        var UserLevel = await _localStorage.GetItemAsStringAsync("role");                
+        if (UserLevel.Contains("Admin"))
+        {
+            roles = (await RoleService.GetRoles()).Where(x => x.RoleType != "Master").ToArray();            
+        }                    
+    }
+
+    async Task SaveChanges()
+    {
+        isProcessing = true;
+        var prompt = await Dialog.ShowMessageBox("Confirmation", "Do you wish to save", yesText:"Yes", cancelText:"No");
+        if (prompt is null)
+        {
+            isProcessing = false;
+            return;
+        }
+
+        bool validated = ValidateUserInputs();
+        if (!validated)
+        {
+            isProcessing = false;
+            return;            
+        }
+
+        bool Success = false;
+        try
+        {
+            employee.FirstName = StringConverter.ConvertToTitleCase(employee.FirstName!);
+            employee.LastName = StringConverter.ConvertToTitleCase(employee.LastName!);
+            employee.HomeAddress = !string.IsNullOrEmpty(employee.HomeAddress) ? StringConverter.ConvertToTitleCase(employee.HomeAddress!) : string.Empty;
+            employee.AccountName = StringConverter.ConvertToTitleCase(employee.AccountName!);                        
+            if (isAdd)
+            {                
+                employee.EmpLoyedDate = DateTime.Now.Date;
+                Success = await EmployeeService.AddEmployee(employee);
+                snackBar.Add("Employee Successfully Added", Severity.Success);
+                employee = new();
+            }
+            else
+            {                
+                Success = await EmployeeService.EditEmployee(id, employee);
+                snackBar.Add("Employee Successfully Edited", Severity.Success);
+                nav.NavigateTo("employees");
+            }
+
+            if (!Success)
+            {
+                snackBar.Add("Error occured!", Severity.Error);
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            snackBar.Add("Error occured!", Severity.Error);
+        }
+        finally
+        {            
+            isProcessing = false;
+        }
+    }
+
+    private async Task OnBranchChanged(Guid id)
+    {
+        employee.BranchID = id;
+        shops = branches.SelectMany(x => x.Shops).Where(x => x.BranchID == id).ToArray();
+        await InvokeAsync(StateHasChanged);
+    }
+    private async Task OnShopChanged(Guid id)
+    {
+        employee!.EmployeeAccount!.ShopID = id;
+        ShopID = id;
+        await InvokeAsync(StateHasChanged);
+    }
+    
+    bool ValidateUserInputs()
+    {
+        if (canLogin == true)
+        {            
+            if (isAdd && employee!.EmployeeAccount!.RoleId == Guid.Empty 
+            || employee.EmployeeAccount!.Username == string.Empty)
+            {
+                snackBar.Add("Username/Role Cannot be Empty!", Severity.Warning);
+                isProcessing = false;
+                return false;
+            }
+        }
+        return true;           
+    }
+
+    void BirthDayChanged(DateTime? date)
+    {
+        if (date is not null)
+        {
+            employee.Bday = date.Value.Day;
+            employee.Bmonth = date.Value.Month;
+            StateHasChanged();
+        }       
+    }
+    private async Task UploadFiles(InputFileChangeEventArgs e)
+    {        
+        MemoryStream ms = new();
+        var picture = e.GetMultipleFiles().FirstOrDefault();
+        var image = await picture!.RequestImageFileAsync("image/jpeg", 200, 200);
+        await image.OpenReadStream().CopyToAsync(ms);
+        employee.ImageBase64 = Convert.ToBase64String(ms.ToArray());
+        StateHasChanged();
+        //TODO upload the files to the server
+    }
+}

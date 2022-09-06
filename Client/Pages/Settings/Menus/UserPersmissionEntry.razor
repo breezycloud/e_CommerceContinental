@@ -1,0 +1,87 @@
+@if (Menus is null)
+{
+    <Loader/>
+}
+else
+{
+    <EditForm Model="@UserPermission">
+        <DataAnnotationsValidator/>
+        <MudDialog>
+            <TitleContent>
+                User Permission
+            </TitleContent>
+            <DialogContent>
+                <MudStack Spacing="2" Justify="Justify.Center">
+                    <MudTextField T="string" Value="Employee!.FullName" Variant="Variant.Outlined" Label="Employee" ReadOnly="true"/>
+                    <div class="d-flex flex-row gap-3">
+                        <MudSelect Dense="true" AnchorOrigin="Origin.BottomCenter" Strict="true" T="Guid" Value="SelectedMenu!.Id" ValueChanged="@MenuChanged" Direction="Direction.Bottom" OffsetY="true" Label="Menus" Variant="Variant.Outlined">
+                            @foreach (Menu menu in Menus!)
+                            {
+                                <MudSelectItem Value="@(menu!.Id)">@menu!.MenuName</MudSelectItem>
+                            }
+                        </MudSelect>     
+                        <MudCheckBox Class="py-2" T="bool" Checked="CheckAllMenus" CheckedChanged="EnableAll" Style="@(SelectedMenu!.SubMenus!.Count > 0 ? "visibility:visible;" : "visibility:hidden;")" Label="Enable All Sub Menus"/>
+                    </div>
+                    @if (SelectedMenu!.SubMenus.Count > 0)
+                    {
+                        <MudSelect Dense="true" AnchorOrigin="Origin.BottomCenter" Strict="true" T="Guid" Value="SelectedMenu!.Id" ValueChanged="@MenuChanged" Direction="Direction.Bottom" OffsetY="true" Label="Sub Menus" Variant="Variant.Outlined">
+                            @foreach (SubMenu menu in SelectedMenu.SubMenus!)
+                            {
+                                <MudSelectItem Value="@(menu!.Id)">@menu!.SubMenuName</MudSelectItem>
+                            }
+                        </MudSelect>     
+                    }
+                    <MudFab OnClick="AllowMenu" Color="Color.Primary" Style="width:150px;" Label="Allow" Size="Size.Medium"/>
+                    <MudPaper Width="300px">
+                        <MudList Clickable="true">
+                            <MudListSubheader>
+                                Allowed Menus
+                            </MudListSubheader>
+                        </MudList>
+                    </MudPaper>
+                </MudStack>
+            </DialogContent>
+        </MudDialog>
+    </EditForm>
+}
+
+@code {
+    private UserPermission? UserPermission { get; set; }
+    [Parameter] public Employee Employee { get; set; } = new();
+    [Parameter] public bool SaveType { get; set; } = false;
+    private Menu[]? Menus { get; set; } = null;
+    private Menu? SelectedMenu { get; set; } = new();
+    private bool CheckAllMenus { get; set; } = false;
+    private List<Menu>? AllowedMenus { get; set; }
+    protected override async Task OnParametersSetAsync()
+    {        
+        UserPermission = new();
+        Menus = await MenuService.GetMenus();        
+    }
+
+    void MenuChanged(Guid menuID)
+    {
+        SelectedMenu = Menus!.First(x=> x.Id == menuID);
+        StateHasChanged();
+    }
+
+    void EnableAll(bool state)
+    {
+    }
+
+    void AllowMenu()
+    {
+        if (SelectedMenu is null)
+            return;
+        @* AllowedMenus!.Add(new Menu { })
+        if (SelectedMenu!.SubMenus!.Count > 0)
+        {
+            foreach (var item in SelectedMenu.SubMenus)
+            {
+                if (!DropItems!.Any(x => x.MenuID == item.Id))
+                    DropItems!.Add(new MenuDropItem { MenuID = item.Id, MenuName = item.SubMenuName, Identifier = "SubMenu"});
+            }            
+        } *@
+    }
+}
+

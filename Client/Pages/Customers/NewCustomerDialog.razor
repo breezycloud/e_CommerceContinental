@@ -1,0 +1,103 @@
+@using Handlers
+
+<EditForm EditContext="context" OnValidSubmit="Save">
+    <DataAnnotationsValidator/>    
+    <MudDialog>
+        <TitleContent>
+            <MudText>Add Customer</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Customer.CustomerName" Label="Customer Name" Margin="Margin.Dense" Variant="Variant.Filled" For="@(() => Customer.CustomerName)"></MudTextField>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Customer.PhoneNo" Label="Phone Number" Margin="Margin.Dense" Variant="Variant.Filled" For="@(() => Customer.PhoneNo)"></MudTextField>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Customer.Email" Label="Email" Margin="Margin.Dense" Variant="Variant.Filled"></MudTextField>
+                </MudItem>            
+                <MudItem xs="12" sm="6">                    
+                    <MudTextField @bind-Value="Customer.ContactAddress" Lines="3" Label="Home Address" Variant="Variant.Text"></MudTextField>
+                </MudItem>            
+                <MudItem xs="12" sm="6">                    
+                    <MudTextField @bind-Value="Customer.OfficeAddress" Lines="3" Label="Office Address" Variant="Variant.Text"></MudTextField>
+                </MudItem>            
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel">Close</MudButton>
+            <MudButton Disabled="isProcessing"ButtonType="ButtonType.Submit" Variant="Variant.Filled" 
+                Color="Color.Primary" >@(isProcessing ? "Processing" : "Save")</MudButton>
+        </DialogActions>
+    </MudDialog>    
+</EditForm>
+
+@code {
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+    [Parameter] public Customer Customer { get; set; } =new();
+    [Parameter] public bool isAdd { get; set; } = true;
+    [Parameter] public string? Route { get; set; }
+
+    private bool isProcessing = false;
+    EditContext? context;
+
+    protected override void OnParametersSet()
+    {
+        context = new EditContext(Customer);
+    }
+    void Cancel() => MudDialog!.Close(DialogResult.Ok(true));
+    async Task Save()
+    {
+        isProcessing = true;
+        var result = await Dialog.ShowMessageBox("Confirmation",
+        $"Do you wish to save", yesText: "Yes", cancelText: "No");
+        if (result is null)
+        {
+            isProcessing= false;
+            return;        
+        }
+        else if (!result.Value)
+        {
+            isProcessing = false;
+            return;
+        }
+        var exist = await CustomerService.ExistCustomer(Customer!.PhoneNo!);
+        if (!string.IsNullOrEmpty(exist.PhoneNo))
+        {
+            await Dialog.ShowMessageBox("Notification", $"Phone No has already regitered to {exist.CustomerName}");
+            isProcessing = false;
+            return;
+        }
+        try
+        {            
+            if (isAdd)
+            {                                    
+                Customer.CustomerId = Guid.NewGuid();
+                Customer.CustomerSince = DateTime.Now;
+                Customer.CustomerName = StringConverter.ConvertToTitleCase(Customer!.CustomerName!);
+                await CustomerService.AddCustomer(Customer);
+            }
+            else
+            {
+                Customer.ModifiedDate = DateTime.Now;
+                await CustomerService.UpdateCustomer(Customer);
+            }         
+            snackBar.Add("Customer Successfully Saved", Severity.Success);            
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            snackBar.Add("Operation failed", Severity.Error);            
+        }
+        finally
+        {
+            Cancel();
+            isProcessing = false;            
+            if (Route == "Service")
+                nav.NavigateTo("newserviceorder");
+            else
+                nav.NavigateTo("newproductorder");
+        }
+    }
+}

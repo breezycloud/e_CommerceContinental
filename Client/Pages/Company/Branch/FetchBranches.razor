@@ -1,0 +1,208 @@
+@page "/branches"
+@layout AppLayout
+@attribute [Authorize]
+
+
+<MudText Typo="Typo.h5">Manage Branch</MudText>
+@if (branches == null)
+{
+    <Loader/>
+}
+else
+{    
+    <MudTable Items="@branches.OrderBy(x => x.ModifiedDate)" Elevation="2" Dense="true" Outlined="true" Hover="true" Filter="new Func<Branch, bool>(SearchBranch)">
+        <ToolBarContent>
+            <MudText Typo="@Typo.h6">Branches</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="searchString" Immediate="true" Placeholder="Search" Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh></MudTh>
+            <MudTh>Branch</MudTh>            
+            <MudTh>Address</MudTh>            
+            <MudTh>Phone No 1</MudTh>            
+            <MudTh>Phone No 2</MudTh>            
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd><MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => ShowShopDetails(context.Id))">@((context.ShowShops == true)? "Hide" : "Show") Shops</MudButton></MudTd>
+            <MudTd DataLabel="Branch">@context.BranchName</MudTd>            
+            <MudTd DataLabel="Address">@context.BranchAddress</MudTd>            
+            <MudTd DataLabel="Phone No 1">@context.PhoneNo1</MudTd>            
+            <MudTd DataLabel="Phone No 1">@context.PhoneNo2</MudTd>            
+            <MudTd DataLabel="Actions">
+                <MudTooltip Text="Edit" Placement="Placement.Top">
+                    <MudFab Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                            OnClick="@(() => EditBranch(context))" IconSize="Size.Small" Color="Color.Info" />
+                </MudTooltip>
+                <MudTooltip Text="Add Store" Placement="Placement.Top">
+                    <MudFab Icon="@Icons.Material.Filled.Store" Size="Size.Small"
+                            OnClick="@(() => AddShop(context))" IconSize="Size.Small" Color="Color.Success" />
+                </MudTooltip>
+                <MudTooltip Text="Delete" Placement="Placement.Top">
+                    <MudFab Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Disabled="@isDeleting"
+                            OnClick="@(() => Delete(context))" IconSize="Size.Small" Color="Color.Error" />
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>
+        <ChildRowContent>
+            @if (context.ShowShops)
+            {
+                <MudTr>
+                    <td colspan="7">
+                        <MudCard Elevation="0">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.body1">Shops for <strong>@context.BranchName</strong></MudText>
+                                </CardHeaderContent>                            
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudTable Items="@context.Shops.OrderByDescending(x => x.ModifiedDate)" Context="ShopContext" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+                                     <ColGroup>
+                                        <col style="width:auto;"/>
+                                        <col style="width:auto;"/>
+                                        <col style="width:auto;" />
+                                    </ColGroup>
+                                    <HeaderContent>
+                                        <MudTh>Shop</MudTh>                                        
+                                        <MudTh>Last Modified</MudTh>
+                                        <MudTh Style="text-align:center;">Actions</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="Shop">
+                                            @ShopContext.ShopName
+                                        </MudTd>      
+                                        <MudTd DataLabel="Last Modified">
+                                            @ShopContext.ModifiedDate
+                                        </MudTd>                                  
+                                        <MudTd DataLabel="Actions" Style="text-align:center;">
+                                            <MudTooltip Text="Edit Shop" Placement="Placement.Top">
+                                                    <MudFab Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                                            IconSize="Size.Small" Color="Color.Info"
+                                                            OnClick="@(() => AddShop(context, ShopContext))" />
+                                            </MudTooltip>                                                      
+                                            <MudTooltip Text="Delete" Placement="Placement.Top">
+                                                    <MudFab Disabled="isDeleting" Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                                            OnClick="@(async () => await Delete(shop:ShopContext))" IconSize="Size.Small" Color="Color.Secondary" />
+                                                </MudTooltip>                                                                
+                                        </MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            </MudCardContent>
+                        </MudCard>                
+                    </td>
+                </MudTr>
+            }
+        </ChildRowContent>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+
+    <div class="fabs-container">
+        <MudTooltip Text="Add Branch" Duration="1000">
+            <MudFab Class="fab" OnClick="@(() => Dialog.Show<BranchEntry>(""))" Color="Color.Primary" Icon="@Icons.Material.Filled.Add" />        
+        </MudTooltip>
+    </div>
+}
+
+@code {
+    private bool isBusy = false, isLoading, isDeleting = false;
+    private string progressVisibility => isBusy ? "visibility: visible;" : "visibility: collapse;";    
+    private string operationType => isEdit ? "Edit" : "Add";
+    public bool isEdit { get; set; }    
+    private Branch[]? branches;
+    private Branch branch = new();
+    private Branch? selectedBranch;
+    private string searchString = string.Empty;
+    private HubConnection? hub;
+    protected override async Task OnInitializedAsync()
+    {
+        hub = new HubConnectionBuilder().WithAutomaticReconnect().WithUrl(nav.ToAbsoluteUri("/hubs")).Build();
+        hub.On("UpdateBranches", async () => 
+        {
+            await GetBranches();
+            StateHasChanged();
+        });
+        await hub.StartAsync();
+        await GetBranches();
+    }
+
+    async Task GetBranches()
+    {
+        branches = await BranchService.GetBranches();
+    }
+
+    void EditBranch(Branch branch)
+    {
+        var parameters = new DialogParameters
+        {
+            ["branch"] = branch,
+            ["isAdd"] = false,
+        };
+        Dialog.Show<BranchEntry>("", parameters: parameters);
+    }
+
+    void AddShop(Branch branch, Shop? shop = null)
+    {
+        var parameters = new DialogParameters
+        {
+            ["shop"] = shop is null ? new Shop() : shop,
+            ["branch"] = branch,
+            ["isAdd"] = shop is null ? true : false,
+        };
+        Dialog.Show<BranchStoreEntry>("", parameters: parameters);
+    }
+
+    async Task Delete(Branch? branch = null, Shop? shop = null)
+    {
+        var prompt = await Dialog.ShowMessageBox("Confirmation", "Do you wish to delete", yesText:"Yes", cancelText:"No");
+        if (prompt is null)
+        {
+            isDeleting = false;
+            return;
+        }
+        bool isDeleted = false;
+        try
+        {
+            if (branch is not null)
+                isDeleted = await BranchService.DeleteBranch(branch.Id);
+            else
+                isDeleted = await ShopService.DeleteShop(shop!.Id);
+            if (isDeleted)
+            {
+                snackBar.Add("Record Successfully Deleted", Severity.Success);
+            }
+            else
+            {
+                snackBar.Add("Error Occurred", Severity.Error);
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            snackBar.Add("Error Occurred", Severity.Error);
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private bool SearchBranch(Branch branch)
+    {
+        if (string.IsNullOrEmpty(searchString))
+            return true;
+        if (branch!.BranchName!.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;        
+        return false;
+    }
+
+    void ShowShopDetails(Guid id)
+    {
+        Branch tempBranch = branches!.First(x => x.Id == id);
+        tempBranch.ShowShops = !tempBranch.ShowShops;
+    }
+
+}

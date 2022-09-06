@@ -1,0 +1,60 @@
+﻿@layout AppLayout
+@page "/index"
+@attribute [Authorize(Roles = "Master, Admin, Sales")]
+
+<MudText Typo="Typo.h5">Dashboard</MudText>
+<AuthorizeView Roles="Master, Admin">
+    @if (response is null)
+    {
+        <MasterDashboard IsLoading="isLoading"/>
+    }        
+    else
+    {
+        <MasterDashboard Response="response"/>
+    }
+
+</AuthorizeView>
+ 
+
+@* @if (response is null)
+{
+    <Loader/>
+}
+else
+{
+    <MudGrid>             
+        <MudItem xs="12">
+            <TopChartsView ChartData="response.TopChartData"/>
+        </MudItem>        
+        <MudItem xs="12">
+            <ProductsLineChartView Response="response" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">            
+        </MudItem>       
+        <MudItem xs="12" sm="6" md="4">
+            <ProductTopCustomer/>
+        </MudItem> 
+    </MudGrid>
+}*@
+
+@code {
+    DashboardResponse? response;
+    bool isLoading = true;
+    [CascadingParameter] public Task<AuthenticationState>? AuthenticationStateProvider { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        string Role = await _localStorage.GetItemAsStringAsync("role");
+        if (Role == "Master" || Role == "Admin")        
+            response = await DashboardService.GetDashboardResponse();
+        else 
+        {
+            var branchID = await _localStorage.GetItemAsync<string>("branch");
+            var shopID = await _localStorage.GetItemAsync<string>("shop");
+            response = await DashboardService.GetDashboardResponse();
+        }
+        isLoading = false;
+    }
+
+    void Generate() => Console.WriteLine(Security.Encrypt("Musallim123"));
+}

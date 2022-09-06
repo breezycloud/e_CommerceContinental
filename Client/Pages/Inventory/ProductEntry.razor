@@ -1,0 +1,257 @@
+@layout AppLayout
+@page "/newproduct"
+@page "/editproduct/{id:guid}"
+@using Handlers
+@inject IProductService ProductService
+@inject IBranchService BranchService
+@inject IShopService ShopService
+@attribute [Authorize]
+
+@if (isLoading)
+{
+    <Loader/>
+}
+else
+{
+    <MudText Typo="Typo.h6">@string.Format("{0}", isEdit ? "Edit" : "Add") Product</MudText>
+    <EditForm Model="product" OnValidSubmit="Save">
+        <DataAnnotationsValidator/>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="product.Code" Label="Code" For="@(() => product.Code)" Variant="Variant.Outlined"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="product.Barcode" Label="Barcode" Variant="Variant.Outlined"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="product.ProductName" Label="Product Name" For="@(() => product.ProductName)" Variant="Variant.Outlined"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="product.Description" Label="Description" Variant="Variant.Outlined"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect Dense="true" AnchorOrigin="Origin.BottomCenter" Strict="true" @bind-Value="product.CategoryID" Label="Category" Variant="Variant.Outlined">
+                    @foreach (Category item in categories)
+                    {
+                        <MudSelectItem Value="@item.Id">@item.CategoryName</MudSelectItem>                        
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="Guid" Dense="true" AnchorOrigin="Origin.BottomCenter" Strict="true" Value="@branchID" ValueChanged="BranchChanged" Label="Branch" Variant="Variant.Outlined">
+                    @foreach (Branch item in branches)
+                    {
+                        <MudSelectItem Value="@item.Id">@item.BranchName</MudSelectItem>                        
+                    }
+                </MudSelect>
+            </MudItem>            
+            <MudItem xs="12" sm="6">
+                <MudSelect Dense="true" AnchorOrigin="Origin.BottomCenter" Strict="true" @bind-Value="product.ShopID" Label="Shop" Variant="Variant.Outlined">
+                    @foreach (Shop item in shops)
+                    {
+                        <MudSelectItem Value="@item.Id">@item.ShopName</MudSelectItem>                        
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="product.UnitPrice" Format="N2" For="@(() => product.UnitPrice)" Label="Price" Variant="Variant.Outlined"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="decimal" Disabled="@(isEdit ? true : false)" For="@(() => product.StocksOnHand)" @bind-Value="@product.StocksOnHand" Immediate="true" Label="Quantity" Min="1" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int" @bind-Value="@product.ReorderLevel" Immediate="true" Label="Reorder Level" Min="0" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField Variant="Variant.Outlined" InputType="InputType.Color" @bind-Value="product.Color" Label="Colour"></MudTextField>
+            </MudItem>
+            @if (isEdit)
+            {
+                <MudItem xs="12">
+                    <MudDataGrid Items="product.Stocks.OrderByDescending(x => x.Date)" Outlined="true" Filterable="true" Sortable="true" Dense="true">
+                        <ToolBarContent>
+                            <MudText Typo="Typo.h6">Stocks</MudText> 
+                            <MudSpacer/>
+                            <MudButton OnClick="@(() => AddStock(product))">Add Stock</MudButton>               
+                        </ToolBarContent>
+                        <Columns>
+                            <Column T="Stock" Field="Date" Title="Date" Sortable="false" Filterable="true" />
+                            <Column T="Stock" Field="Quantity"/>                
+                            <Column T="Stock" Title="Actions" Context="StockContext">
+                                <CellTemplate>
+                                    @* <MudFab Size="Size.Small" Icon="@Icons.Material.Filled.Edit" OnClick="@(() => EditStock(StockContext))" /> *@
+                                    <MudFab Disabled="@isDeleting" Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.Delete" OnClick="@(() => DeleteStock(StockContext.Item))"/>
+                                </CellTemplate>
+                            </Column>
+                        </Columns>
+                        <PagerContent>
+                            <MudDataGridPager T="Stock" />
+                        </PagerContent>
+                    </MudDataGrid>
+                </MudItem>
+            }
+            <MudItem xs="12" sm="6">
+                <div class="d-flex align-center justify-center pa-4">
+                    <MudFab Label="Back" Size="Size.Medium"  Style="width:200px;" OnClick="@(() => nav.NavigateTo("products"))"/>
+                </div>            
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <div class="d-flex align-center justify-center pa-4">
+                    <MudFab Disabled="@isProcessing" Label="@(isProcessing ? "Processing" : "Save")" Size="Size.Medium" ButtonType="ButtonType.Submit" Style="width:200px;" Color="Color.Primary"/>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </EditForm>
+    
+}
+
+@code {
+    private bool isProcessing, isLoading, isDeleting = false;
+    private Product product = new();   
+    private Category[] categories = Array.Empty<Category>();
+    private Branch[] branches = Array.Empty<Branch>();
+    private Shop[] shops = Array.Empty<Shop>();
+    [Parameter] public Guid id { get; set; }
+    public Guid branchID { get; set; }
+    public bool isEdit => id == Guid.Empty ? false : true;
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        categories = await ProductService.GetCategories();
+        branches = await BranchService.GetBranches();
+        if (isEdit)
+            product = await ProductService.GetProduct(id);
+        isLoading = false;
+    }
+
+    async Task Save()
+    {
+        isProcessing = true;
+        var result = await Dialog.ShowMessageBox("Confirmation",
+        $"Do you wish to {(isEdit ? "Edit" : "Add")} Product?", yesText: "Yes", cancelText: "No");
+        if (result is null)
+        {
+            isProcessing= false;
+            return;        
+        }
+        else if (!result.Value)
+        {
+            isProcessing = false;
+            return;
+        }
+        if (string.IsNullOrEmpty(product.Code))
+        {
+            isProcessing = true;
+            snackBar.Add("Product Code cannot be empty", Severity.Warning);
+            return;
+        }
+        if (product.CategoryID == Guid.Empty)
+        {
+            isProcessing = true;
+            snackBar.Add("Select category to proceed", Severity.Warning);
+            return;
+        }        
+        if (product.ShopID == Guid.Empty)
+        {
+            isProcessing = true;
+            snackBar.Add("Select shop to proceed", Severity.Warning);
+            return;
+        }
+        try
+        {
+            product.ProductName = StringConverter.ConvertToTitleCase(product.ProductName!);            
+            product.Description = string.IsNullOrEmpty(product.Description) ? "" : StringConverter.ConvertToTitleCase(product.Description);
+            if (!isEdit)
+            {                   
+                var _result = await ProductService.ExistProductCode(product.Code);
+                if (!string.IsNullOrEmpty(_result.Code))
+                {
+                    snackBar.Add("Product Code Exist Already, Please Change!", Severity.Warning);
+                    isProcessing = false;
+                    return;
+                }
+                product.Stocks.Add(new Stock
+                {
+                    Id = Guid.NewGuid(),
+                    ProductID = product.Id,
+                    Date = DateTime.Now,
+                    Quantity = product.StocksOnHand
+                });
+                await ProductService.AddProduct(product);
+            }
+            else
+            {                
+                await ProductService.EditProduct(id, product);
+            }
+            snackBar.Add($"Product successfully saved!", Severity.Success);
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine($"{ex.Message} {ex.StackTrace} {ex.InnerException} {ex.Source}");
+            snackBar.Add($"Error occured!", Severity.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+            if (!isEdit)
+                product = new();
+            else
+                nav.NavigateTo("products");
+        }        
+    }
+
+    void AddStock(Product product)
+    {
+        var parameter = new DialogParameters { ["Product"] = product };
+        Dialog.Show<ProductStock>("", parameters: parameter);
+    }
+    void EditStock(Stock stock)
+    {
+        var parameter = new DialogParameters { ["Product"] = product, ["stock"] = stock };
+        Dialog.Show<ProductStock>("", parameters: parameter);
+    }
+
+    private void BranchChanged(Guid id)
+    {
+        shops = branches.Where(x => x.Id == id).SelectMany(x => x.Shops).ToArray();
+        branchID = id;
+    }
+
+    async Task DeleteStock(Stock stock)
+    {
+        isDeleting = true;
+        bool? result = await Dialog.ShowMessageBox("Confirmation",
+        $"Do you wish to Delete Product?", yesText: "Yes", cancelText: "No");
+        if (result is null)
+        {
+            isDeleting= false;
+            return;        
+        }
+        else if (!result.Value)
+        {
+            isDeleting = false;
+            return;
+        }
+            
+        try
+        {
+            product.StocksOnHand -= stock.Quantity;
+            product.ModifiedDate = DateTime.Now;
+            await ProductService.EditProduct(product.Id, product);
+            await ProductService.DeleteStock(stock.Id);
+            snackBar.Add($"Stock successfully deleted!", Severity.Success);            
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            snackBar.Add($"Error occured!", Severity.Error);
+        }
+        finally
+        {
+            isDeleting = false;
+            await OnParametersSetAsync();
+        }        
+    }
+
+}
+

@@ -1,0 +1,99 @@
+@layout AppLayout
+@page "/categories"
+@inject IProductService ProductService
+@attribute [Authorize]
+
+
+<MudText Typo="Typo.h5">Manage Categories</MudText>
+@if (!categories!.Any())
+{
+    <Loader/>
+}
+else
+{
+    <MudDataGrid Items="categories" Outlined="true" Elevation="2" Dense="true">
+        <ToolBarContent>
+            <MudText Typo="@Typo.h6">Categories</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="searchString" Immediate="true" Placeholder="Search" Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+        <Columns>
+            <Column T="Category" Field="CategoryName" Title="Item" Filterable="true"/>
+            <Column T="Category" Field="Description" Filterable="true"/>
+            <Column T="Category" Field="ModifiedDate" Title="Date Modified" Filterable="true"/>
+            <Column T="Category" Title="Actions" Context="context">
+                <CellTemplate>
+                    <MudFab Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Edit" OnClick="@(() => Edit(context.Item))" />
+                    <MudFab Disabled="@isDeleting" Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.Delete" OnClick="@(() => Delete(context.Item.Id))"/>
+                </CellTemplate>
+            </Column>
+        </Columns>
+    </MudDataGrid>
+    <div class="fabs-container">
+        <MudTooltip Text="Add" Duration="1000">
+            <MudFab Class="fab" OnClick="@(() => { Dialog.Show<CategoryEntry>("", options); } )" Color="Color.Primary" Icon="@Icons.Material.Filled.Add" />        
+        </MudTooltip>
+    </div>
+}
+
+@code{
+    private string searchString = string.Empty;
+    private bool isDeleting = false;
+    private Category[]? categories = Array.Empty<Category>();
+    DialogOptions options = new DialogOptions { CloseButton = true };
+    private HubConnection? hub;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadData();
+        hub = new HubConnectionBuilder().WithUrl(nav.ToAbsoluteUri("/hubs")).Build();
+        hub.On("UpdateCategories", async () =>
+        {
+            await LoadData();
+            StateHasChanged();
+        });
+        await hub.StartAsync();        
+    }
+
+    public async Task LoadData()
+    {
+        categories = await ProductService.GetCategories();
+    }
+
+    void Edit(Category category)
+    {        
+        var parameters = new DialogParameters
+        {  
+            ["Category"] = category, 
+            ["isAdd"] = false            
+        };
+        Dialog.Show<CategoryEntry>("", parameters: parameters, options);
+    }
+
+    private async Task Delete(Guid id)
+    {
+        isDeleting = true;
+        var prompt = await Dialog.ShowMessageBox("Confirmation", "Do you wish to delete", yesText:"Yes", cancelText:"No");
+        if (prompt is null)
+        {
+            isDeleting = false;
+            return;
+        }
+        try
+        {
+            await ProductService.DeleteCategory(id);
+            snackBar.Add("Item Successfully Delete", Severity.Success);
+            await OnParametersSetAsync();
+        }
+        catch
+        {
+            snackBar.Add("An Error Occured", Severity.Error);
+        }
+        finally
+        {
+            isDeleting = false;
+        }        
+    }
+
+}

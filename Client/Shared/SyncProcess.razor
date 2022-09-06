@@ -1,0 +1,42 @@
+@using e_CommerceContinental.Client.Data
+@inject Synchronizer Synchronizer
+@implements IDisposable
+
+
+@if (Synchronizer.isUploading)
+{
+    <div class="sync-container">
+        <MudPaper Class="pa-4" Style="background: #f5f5f5ff;" Width="300" Height="350">
+            <MudText Color="Color.Inherit" Align="Align.Center">Getting updated data...</MudText>
+            <MudProgressLinear Color="Color.Primary" Value="@Synchronizer.SyncCompleted" Size="Size.Large" Class="my-7">
+                <MudText Typo="Typo.subtitle1" Color="Color.Dark">
+                    <b>@string.Format("{0}%", Synchronizer.SyncCompleted)</b>
+                </MudText>
+            </MudProgressLinear>
+        </MudPaper>
+    </div>
+}
+
+
+@code{
+    Exception? syncException;
+    protected override void OnInitialized()
+    {
+        //Synchronizer.SynchronizeInBackground("");
+        Synchronizer.OnUpdate += StateHasChanged;
+        Synchronizer.OnError += HandleSyncError;
+
+    }
+
+    public void Dispose()
+    {
+        Synchronizer.OnUpdate -= StateHasChanged;
+        Synchronizer.OnError -= HandleSyncError;
+    }
+
+    void HandleSyncError(Exception ex)
+    {
+        syncException = ex;
+        StateHasChanged();
+    }
+}

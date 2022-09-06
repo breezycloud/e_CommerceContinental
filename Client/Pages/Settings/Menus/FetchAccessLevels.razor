@@ -1,0 +1,240 @@
+@page "/accesslevels"
+@layout AppLayout
+@attribute [Authorize]
+
+<MudText Typo="Typo.h5">Manage System Menus/SubMenus</MudText>
+@if (isBusy)
+{
+    <Loader/>    
+}
+else
+{
+    <MudTable Items="@menus" Dense="true" Hover="@true" Outlined="true"
+        Filter="new Func<Menu, bool>(FilterFunc)" OnRowClick="RowClickEvent" T="Menu">
+        <ToolBarContent>            
+            <MudSpacer />
+            <MudTextField @bind-Value="searchString" Immediate="true" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+        <ColGroup>
+            <col style="width:300px;" />
+            <col />
+            <col />
+            <col />
+            <col />
+        </ColGroup>
+        <HeaderContent>
+            <MudTh></MudTh>
+            <MudTh>Order</MudTh>
+            <MudTh>Menu Name</MudTh>
+            <MudTh>Last Modified</MudTh>
+            <MudTh>Actions</MudTh>        
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd><MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => ShowSubMenuDetails(context.Id))">@((context.ShowSubMenus == true)? "Hide" : "Show") Sub Menu</MudButton></MudTd>
+            <MudTd DataLabel="Order">@context.Order</MudTd>
+            <MudTd DataLabel="Menu Name">@context.MenuName</MudTd>
+            <MudTd DataLabel="Last Modified">@context.ModifiedDate</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudTooltip Text="Edit Menu" Placement="Placement.Top">
+                        <MudFab Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                IconSize="Size.Small" Color="Color.Info"
+                                OnClick="@(() => OpenMenuDialog(context, menus!.Count()))" />
+                </MudTooltip>                                        
+                <MudTooltip Text="Add Sub Menu" Placement="Placement.Top">
+                    <MudFab Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                            IconSize="Size.Small" Color="Color.Success"
+                            OnClick="@(() => OpenSubMenuDialog(context, totalSubMenus: menus!.SelectMany(x => x!.SubMenus!).Count()))" />
+                </MudTooltip>                                      
+                <MudTooltip Text="Delete" Placement="Placement.Top">
+                        <MudFab Disabled="isProcessing" Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                OnClick="@(async () => await DeleteMenu(context.Id, "Menu"))" IconSize="Size.Small" Color="Color.Secondary" />
+                    </MudTooltip>                    
+            </MudTd>
+        </RowTemplate>
+        <ChildRowContent>
+            @if (context.ShowSubMenus)
+            {
+                <MudTr>
+                    <td colspan="5">
+                        <MudCard Elevation="0">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.body1">Sub Menu Details for <strong>@context.MenuName</strong></MudText>
+                                </CardHeaderContent>                            
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudTable Items="@context.SubMenus" Context="SubMenuContext" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+                                     <ColGroup>
+                                        <col />
+                                        <col />
+                                        <col style="width:200px;" />
+                                    </ColGroup>
+                                    <HeaderContent>
+                                        <MudTh>Order</MudTh>
+                                        <MudTh>SubMenu Name</MudTh>
+                                        <MudTh Style="text-align:center;">Actions</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="Order">
+                                            @SubMenuContext.Order
+                                        </MudTd>
+                                        <MudTd DataLabel="SubMenu Name">
+                                            @SubMenuContext.SubMenuName
+                                        </MudTd>
+                                        <MudTd DataLabel="Actions" Style="text-align:center;">
+                                            <MudTooltip Text="Edit Menu" Placement="Placement.Top">
+                                                    <MudFab Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                                            IconSize="Size.Small" Color="Color.Info"
+                                                            OnClick="@(() => OpenSubMenuDialog(context, SubMenuContext, context!.SubMenus!.Count))" />
+                                            </MudTooltip>                                                      
+                                            <MudTooltip Text="Delete" Placement="Placement.Top">
+                                                    <MudFab Disabled="isProcessing" Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                                            OnClick="@(async () => await DeleteMenu(SubMenuContext.Id, "SubMenu"))" IconSize="Size.Small" Color="Color.Secondary" />
+                                                </MudTooltip>                                                                
+                                        </MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            </MudCardContent>
+                        </MudCard>                
+                    </td>
+                </MudTr>
+            }
+        </ChildRowContent>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+    <AuthorizeView Roles="Master, Admin, Manager">
+        <div class="fabs-container">
+            <MudTooltip Text="Add Menu" Placement="Placement.Start">
+                <MudFab OnClick="@(() => OpenMenuDialog(null, menus!.Count()))" Class="fab" Color="Color.Primary" Icon="@Icons.Material.Filled.Add" />        
+            </MudTooltip>
+        </div>
+    </AuthorizeView>
+}    
+
+
+@code {
+    private string reportType = string.Empty;
+    private DateTime? filterDate;
+    private bool isVisible = false;
+    private bool isBusy, isProcessing, isPrinting = false;    
+    private string searchString = "";
+    private Menu? menu;
+    private Menu[]? menus = Array.Empty<Menu>();
+    Guid MenuID { get; set; }
+    DialogOptions? DialogOptions;
+    private HubConnection? hub;
+    protected override async Task OnInitializedAsync()
+    {
+        isBusy = true;
+        hub = new HubConnectionBuilder().WithUrl(nav.ToAbsoluteUri("/hubs")).Build();
+        hub.On("LoadMenus", async () => {
+            await LoadMenus();
+            StateHasChanged();
+        });
+        await hub!.StartAsync();
+        await LoadMenus();
+        DialogOptions = new DialogOptions
+        {
+            CloseButton = true,
+            CloseOnEscapeKey = true
+        };  
+        isBusy = false;
+    }
+
+    async Task LoadMenus() => menus = await MenuService.GetMenus();
+
+    private bool FilterFunc(Menu menu)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (menu!.MenuName!.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (menu!.Order!.ToString()!.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;        
+        return false;
+    }
+
+    private void RowClickEvent(TableRowClickEventArgs<Menu> tableRowClickEventArgs)
+    {
+        EditMenuDialog(tableRowClickEventArgs.Item.Id);
+    }
+
+
+    private void CustomerDialog() => nav.NavigateTo($"Customer/{true}");
+        
+    private void EditMenuDialog(Guid id) => nav.NavigateTo($"/menu/{false}/{id}");
+    private async ValueTask<bool> Confirmation(string operationType)
+    {
+        bool? result = await Dialog.ShowMessageBox("Confirmation",
+        $"Do you wish to {operationType} Customer?",
+         yesText: "Yes", cancelText:"No");
+        if (result is null)
+            return false;
+
+        return true;
+    }
+
+    private async Task DeleteMenu(Guid id, string? MeneType = null)
+    {
+        isProcessing = true;
+        var promptResult = await Confirmation("Delete");
+        if (!promptResult)
+        {
+            isProcessing = false;
+            return;
+        }
+        bool success = false;
+        try
+        {
+            if (MeneType == "Menu")
+                success = await MenuService.DeleteMenu(id);
+            else
+                success = await MenuService.DeleteSubMenu(id);
+            if(!success)
+            {
+                snackBar.Add("Operation failed", Severity.Error);
+            }
+            else
+            {
+                snackBar.Add("Menu Successfully Deleted", Severity.Success);
+                await OnInitializedAsync();                
+            }            
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            snackBar.Add("Operation failed", Severity.Error);
+        }        
+        isProcessing = false;
+    }
+    void ShowSubMenuDetails(Guid id)
+    {
+        Menu tempMenu = menus!.First(x => x.Id == id);
+        tempMenu.ShowSubMenus = !tempMenu.ShowSubMenus;
+    }
+    void OpenMenuDialog(Menu? menu = null, int totalMenus = 0)
+    {
+        DialogParameters parameter = new DialogParameters
+        {
+            ["menu"] = menu is not null ? menu : new Menu(),
+            ["SaveType"] = menu is not null ? false : true,
+            ["TotalMenus"] = totalMenus += 1
+        };        
+        Dialog.Show<MenuEntry>("", parameter,DialogOptions);            
+        
+    }
+    
+    void OpenSubMenuDialog(Menu? menu = null, SubMenu? subMenu = null, int totalSubMenus = 0)
+    {
+        DialogParameters parameters = new DialogParameters
+        {
+            ["menu"] = menu,
+            ["SubMenu"] = subMenu is not null ? subMenu : new SubMenu(),
+            ["SaveType"] = subMenu is not null ? false : true,
+            ["TotalMenus"] = totalSubMenus += 1
+        };
+        Dialog.Show<SubMenuEntry>("", parameters, DialogOptions);
+    }
+}

@@ -1,0 +1,58 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+@inject IDialogService Dialog
+
+<MudLayout Class="mudblazor-landingpage">
+    <MudAppBar Class="landing-appbar" Elevation="0">
+        <AppBar DrawerToggleCallback="ToggleDrawer" />
+    </MudAppBar>
+    <MudDrawer Open="@_drawerOpen" OpenChanged="OnDrawerOpenChanged" ClipMode="DrawerClipMode.Docked" Elevation="0" Breakpoint="Breakpoint.Lg">
+        <MudHidden Breakpoint="Breakpoint.MdAndUp">
+            <MudToolBar Dense="true" DisableGutters="true" Class="docs-gray-bg">
+                @* @if (_topMenuOpen == false)
+                {
+                    <MudIconButton Icon="@Icons.Rounded.ArrowBack" Color="Color.Inherit" OnClick="@((e) => OpenTopMenu())"/>
+                }
+                else
+                {
+                    <MudIconButton Icon="@Icons.Rounded.Close" Color="Color.Inherit" OnClick="ToggleDrawer"/>
+                } *@
+                <MudSpacer/>
+                <AppBarButtons/>
+            </MudToolBar>
+    
+            @if (_topMenuOpen == false)
+            {
+                <AuthorizeView Roles="Master">
+                    <MudNavMenu Color="Color.Primary" Margin="Margin.Dense" Rounded="true" Class="pa-2">
+                        <MudNavLink Href="/index">Dashboard</MudNavLink>
+                        <MudNavLink Href="/customers">Customers</MudNavLink>
+                        <MudNavGroup Title="Sales" ExpandIcon="@Icons.Material.Filled.ExpandMore">
+                            <MudNavLink Href="/sales">Sales</MudNavLink>
+                        </MudNavGroup>                    
+                        <MudNavLink Href="/inventory">Inventory</MudNavLink>                    
+                        <MudNavLink Href="/expenditures">Users</MudNavLink>
+                        @* <MudNavGroup Title="Employees" ExpandIcon="@Icons.Material.Filled.ExpandMore">
+                            <MudNavLink Href="/employees">Employees</MudNavLink>
+                            <MudNavLink Href="/salary">Salary</MudNavLink>
+                            <MudNavLink Href="/advance">Advance</MudNavLink>
+                            <MudNavLink Href="/banks">Banks</MudNavLink>
+                            <MudNavLink Href="/bonus">Bonus</MudNavLink>
+                            <MudNavLink Href="/penalty">Penalty</MudNavLink>
+                            <MudNavLink Href="/branches">Branch</MudNavLink>
+                            <MudNavLink Href="/departmetns">Department</MudNavLink>                        
+                        </MudNavGroup> *@                        
+                        <MudNavLink Href="/smssettings">SMS</MudNavLink>
+                    </MudNavMenu>                    
+                </AuthorizeView>
+            }
+        </MudHidden>
+    </MudDrawer>
+    <MudMainContent Class="pa-0">
+        <LandingSection SectionClass="top-section" BackgroundClass="sweet">
+            <UpdateAvailableDetector/>
+            <SyncProcess/>
+            @Body
+        </LandingSection>        
+    </MudMainContent>
+</MudLayout>

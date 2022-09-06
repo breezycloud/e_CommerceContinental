@@ -1,0 +1,52 @@
+@page "/previewreport"
+
+<div style="width: 297mm;height:210mm;">
+    <MudGrid Spacing="5">
+        <MudItem xs="12" sm="6">
+            <MudText Typo="Typo.h6">Transaction Report</MudText>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+        </MudItem>
+        <MudItem Class="m-5" xs="12">  
+            <MudTable Items="AppState!.FilteredOrders"  Dense="true" Outlined="true" Elevation="0" Bordered="true">
+                <ColGroup>
+                    <col style="width:auto;" />
+                    <col style="width:auto;"/>
+                    <col style="width:30px;" />
+                    <col />
+                </ColGroup>
+                <HeaderContent>         
+                    <MudTh>Customer</MudTh>
+                    <MudTh>Receipt #</MudTh>                        
+                    <MudTh>Date</MudTh>    
+                    <MudTh Style="text-align:end;">Sub Total</MudTh>        
+                    <MudTh Style="text-align:end;">Total</MudTh>
+                    <MudTh Style="text-align:end;">Discount</MudTh>                    
+                    <MudTh Style="text-align:end;">Paid</MudTh>         
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Customer</MudTd>            
+                    <MudTd Style="text-align:center;">@context.ReceiptNo</MudTd>            
+                    <MudTd Style="text-align:center;">@context.OrderDate.ToShortDateString()</MudTd>
+                    <MudTd Style="text-align:end;">@context.SubTotal.ToString("N2")</MudTd>
+                    <MudTd Style="text-align:end;">@context.TotalAmount.ToString("N2")</MudTd>
+                    <MudTd Style="text-align:end;">@context.Discount.ToString("N2")</MudTd>                    
+                    <MudTd Style="text-align:end;">@context.AmountPaid.ToString("N2")</MudTd>
+                </RowTemplate>
+                <FooterContent>                
+                    <MudTd Style="text-align:end;font-weight:bold;" colspan="7">
+                       Grand Total: @AppState!.FilteredOrders!.Sum((e) => e.AmountPaid).ToString("N2")
+                    </MudTd>
+                </FooterContent>                
+            </MudTable>
+        </MudItem>
+    </MudGrid>
+</div>
+
+@code {
+     private TableGroupDefinition<CustomerWithOrder> GroupDefinition = new()
+        {
+            GroupName= "",
+            Selector = (e) => e.ReceiptNo
+        };
+}

@@ -1,0 +1,30 @@
+@attribute [Authorize]
+
+<MudStack Spacing="1" Justify="Justify.Center">
+    <MudText Align="Align.Center" Typo="Typo.h6" Style="font-weight: 200;">Top Purchase Products</MudText>
+    <MudChart ChartType="ChartType.Pie" InputData="@data" InputLabels="@XAxisLabels" Width="100%" Height="320px"></MudChart>
+</MudStack>
+
+@code {
+    [Parameter] public ProductsPieChart[]? Data { get; set; }
+    public List<ChartSeries> Series = new List<ChartSeries>();
+    private double[]? data = Array.Empty<double>();
+    public string[] XAxisLabels = Array.Empty<string>();
+    private Dictionary<string, int>? sales;    
+    protected override async Task OnParametersSetAsync()
+    {
+        await AppendChartData(Data!);
+    }
+    
+    private async ValueTask AppendChartData(ProductsPieChart[] data)
+    {        
+        XAxisLabels = data!.Select(x => x!.Product!)!.Distinct()!.ToArray();
+        this.data = new double[XAxisLabels.Count()];
+        for (int d= 0; d < XAxisLabels.Count(); d++)
+        {
+            var pieChart = data.Where(i => i.Product == XAxisLabels[d]).FirstOrDefault();
+            this.data[d] = pieChart!.TotalSales!.Value;
+        }
+        await InvokeAsync(StateHasChanged);
+    }    
+}

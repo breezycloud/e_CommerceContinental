@@ -1,0 +1,105 @@
+@using Handlers
+@attribute [Authorize]
+
+<EditForm EditContext="context" OnValidSubmit="Save">
+    <DataAnnotationsValidator/>    
+    <MudDialog>
+        <TitleContent>
+            <MudText>@string.Format("{0}", isAdd ? "Add" : "Edit") Store</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudGrid Spacing="2">                
+                <MudItem xs="12">
+                    <MudText Typo="Typo.body2">Branch Details</MudText>
+                    <MudTextField @bind-Value="branch.BranchName" Label="Branch Name" Margin="Margin.Dense" Variant="Variant.Text" ReadOnly="true"></MudTextField>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="branch.PhoneNo1" Label="Phone No 1" Margin="Margin.Dense" Variant="Variant.Text" ReadOnly="true"></MudTextField>                    
+                </MudItem>                
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="branch.PhoneNo2" Label="Phone No 2" Margin="Margin.Dense" Variant="Variant.Text" ReadOnly="true"></MudTextField>                    
+                </MudItem>              
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="branch.BranchAddress" Label="Branch Address" Lines="4" Variant="Variant.Text" ReadOnly="true"></MudTextField>                    
+                </MudItem>  
+                <MudItem xs="12">
+                    <MudText Typo="Typo.body2">Shop Details</MudText>
+                    <MudTextField Label="Shop Name" Margin="Margin.Dense" @bind-Value="shop.ShopName" Variant="Variant.Text" For="@(() => shop.ShopName)"/>
+                </MudItem>            
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel">Close</MudButton>
+            <MudButton Disabled="isProcessing"ButtonType="ButtonType.Submit" Variant="Variant.Filled" 
+                Color="Color.Primary" >@(isProcessing ? "Processing" : "Save")</MudButton>
+        </DialogActions>
+    </MudDialog>    
+</EditForm>
+
+
+@code {
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+    [Parameter] public Branch branch { get; set; } = new();
+    [Parameter] public Shop shop { get; set; } = new();
+    [Parameter] public bool isAdd { get; set; } = true;
+    private bool isProcessing = false;
+    EditContext? context = null;
+    void Cancel() => MudDialog!.Close(DialogResult.Ok(true));
+    private HubConnection? hub;
+    protected override Task OnParametersSetAsync()
+    {
+        hub = new HubConnectionBuilder().WithAutomaticReconnect().WithUrl(nav.ToAbsoluteUri("/hubs")).Build();
+        shop.Branch = branch;
+        context = new EditContext(shop);
+        hub.StartAsync();
+        return base.OnParametersSetAsync();        
+    }
+    async Task Save()
+    {
+        isProcessing = true;
+        var prompt = await Dialog.ShowMessageBox("Confirmation", "Do you wish to save", yesText:"Yes", cancelText:"No");
+        if (prompt is null)
+        {
+            isProcessing = false;
+            return;
+        }
+        try
+        {
+            shop.ShopName = StringConverter.ConvertToTitleCase(shop.ShopName!);            
+            bool success = false;
+            shop.Branch = null;
+            shop.BranchID = branch.Id;
+            if (isAdd)
+            {
+                shop.Id = Guid.NewGuid();
+                shop.ModifiedDate = DateTime.Now;
+                success = await ShopService.AddShop(shop);
+            }
+            else
+            {
+                branch.ModifiedDate = DateTime.Now;
+                success = await ShopService.EditShop(shop);
+            }                
+
+            if (success)            
+            {
+                snackBar.Add($"Record Successfully Saved", Severity.Success);
+                await hub!.SendAsync("UpdateBranchTable");
+            }
+            else
+            {
+                snackBar.Add("Error occurred", Severity.Error);                
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            snackBar.Add("Error Occurred", Severity.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+            nav.NavigateTo("branches");
+        }
+    }
+}

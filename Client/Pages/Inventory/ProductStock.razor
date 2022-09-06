@@ -1,0 +1,102 @@
+@inject IProductService ProductService
+@inject NavigationManager nav
+@inject ISnackbar snackBar
+@inject IDialogService Dialog
+
+<EditForm EditContext="context" OnValidSubmit="Save">
+    <DataAnnotationsValidator/>    
+    <MudDialog>
+        <TitleContent>
+            <MudText>Add Stock</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Product.Code" Label="Code" Variant="Variant.Outlined"></MudTextField>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Product.ProductName" Label="Product Name" Variant="Variant.Outlined"></MudTextField>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField Value="@(Product.StocksOnHand + stock.Quantity)" Label="Current Stock" Variant="Variant.Outlined"></MudTextField>
+                </MudItem>            
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="stock.Quantity" Immediate="true" Label="New Stock" Variant="Variant.Outlined"></MudNumericField>
+                </MudItem>            
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel">Close</MudButton>
+            <MudButton Disabled="isProcessing"ButtonType="ButtonType.Submit" Variant="Variant.Filled" 
+                Color="Color.Primary" >@(isProcessing ? "Processing" : "Save")</MudButton>
+        </DialogActions>
+    </MudDialog>    
+</EditForm>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Product Product { get; set; } = new();
+    [Parameter] public Stock stock { get; set; } =new();
+    [Parameter] public bool isAdd { get; set; } = true;
+
+    private bool isProcessing = false;
+    EditContext? context;
+
+    protected override void OnParametersSet()
+    {
+        stock.Product = Product;
+        context = new EditContext(stock);
+    }
+    void Cancel() => MudDialog!.Close(DialogResult.Ok(true));
+    async Task Save()
+    {
+        isProcessing = true;
+        var result = await Dialog.ShowMessageBox("Confirmation",
+        $"Do you wish to save", yesText: "Yes", cancelText: "No");
+        if (result is null)
+        {
+            isProcessing= false;
+            return;        
+        }
+        else if (!result.Value)
+        {
+            isProcessing = false;
+            return;
+        }
+
+        try
+        {
+            if (isAdd)
+            {
+                stock.Id = Guid.NewGuid();
+                stock.ProductID = Product.Id;
+                Product.StocksOnHand += stock.Quantity;
+                Product.ModifiedDate = DateTime.Now;
+                stock.Date = DateTime.Now;   
+                stock.Product = null;                            
+                await ProductService.AddStock(stock);
+                await ProductService.EditProduct(Product.Id, Product);                
+            }
+            else
+            {
+                Product.StocksOnHand -= stock.Quantity;
+                Product.ModifiedDate = DateTime.Now;
+                await ProductService.EditProduct(Product.Id, Product);
+                await ProductService.EditStock(stock.Id, stock);
+            }         
+            //await ProductService.AddStock()
+            snackBar.Add("Stock Successfully Saved", Severity.Success);            
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            snackBar.Add("Operation failed", Severity.Error);            
+        }
+        finally
+        {
+            isProcessing = false;
+            Cancel();
+            nav.NavigateTo("products");
+        }
+    }
+}

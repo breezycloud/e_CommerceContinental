@@ -1,0 +1,19 @@
+<MudMenu @ref="InventoryMenu" Color="Color.Inherit" Variant="Variant.Text" Class="mx-1 px-3"  PopoverClass="docs-layout-menu-shadow" ListClass="d-flex px-4 pb-2 docs-appbar-special-menu" LockScroll="true" Label="Inventory" EndIcon="@Icons.Filled.KeyboardArrowDown" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
+    <MudList Clickable="true">
+        <MudListSubheader>
+            Inventory
+        </MudListSubheader>            
+        <MudListItem OnClick="@(() => Nav("categories", "Inventory"))">
+            <div class="d-flex">
+                <MudText Color="Color.Primary">Category</MudText>
+            </div>
+            <MudText Typo="Typo.body2">Manage Inventory Category</MudText>
+        </MudListItem> 
+        <MudListItem OnClick="@(() => Nav("products", "Inventory"))">
+            <div class="d-flex">
+                <MudText Color="Color.Dark">Products</MudText>
+            </div>
+            <MudText Typo="Typo.body2">Manage Inventory Products</MudText>
+        </MudListItem>                 
+    </MudList>
+</MudMenu>

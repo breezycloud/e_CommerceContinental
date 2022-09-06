@@ -1,0 +1,69 @@
+@layout AppLayout
+@page "/newsale"
+@attribute [Authorize]
+
+<MudGrid Spacing="2">
+    <MudItem lg="8">
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField AutoFocus="true" T="string" ValueChanged="SearchByBarcode" Placeholder="Search by Barcode" Variant="Variant.Outlined" Class="docs-search-bar" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"/>            
+            </MudItem>            
+            <MudItem xs="12" sm="6">
+                <MudAutocomplete Placeholder="Search by Category or Product" T="Product" Immediate="true" CoerceValue="true" SearchFunc="@Search" ValueChanged="OnSearchResult" Variant="Variant.Outlined" Class="docs-search-bar"  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search">
+                    <ItemTemplate Context="result">
+                        <MudText>@result!.Category!.CategoryName</MudText> <MudText Typo="Typo.body2">@result.ProductName</MudText>
+                    </ItemTemplate>
+                </MudAutocomplete>
+            </MudItem>            
+            <MudItem xs="12">
+                @* <ProductList Products="@Products!.ToList()"/> *@
+                <MudContainer Style="max-height: 455px; overflow-y:auto">
+                    @if (!AppState!.Products!.Any())
+                    {
+                        <Loader/>
+                    }
+                    else
+                    {
+                        <MudGrid Justify="Justify.FlexStart">
+                            @foreach (var product in AppState!.Products!)
+                            {
+                                <MudItem xs="4">
+                                    <MudCard Outlined="true" Elevation="0">
+                                        <MudCardMedia Image="icon-192.png" Height="150"/>
+                                        <MudCardContent>
+                                            <MudText Typo="Typo.h5">@product.ProductName</MudText>
+                                            <MudText Typo="Typo.h6">NGN @product.UnitPrice.ToString("N2")</MudText>            
+                                            <MudText Typo="Typo.body2">Qty @product.StocksOnHand</MudText>            
+                                        </MudCardContent>
+                                        <MudCardActions>
+                                            <MudButton OnClick="@(() => OnCart(product))" Color="Color.Primary">Add to Cart</MudButton>                        
+                                        </MudCardActions>
+                                    </MudCard>
+                                </MudItem>
+                            }
+                        </MudGrid>   
+                    }
+                </MudContainer>
+            </MudItem>
+        </MudGrid>
+        @* <div class="d-flex justify-between gap-4">                        
+        </div>  *@        
+    </MudItem>
+    <MudItem lg="4">
+        <MudText Typo="Typo.body1"><strong>Transaction Bill</strong></MudText>
+        <MudContainer Style="width: 455px; height: 455px;max-height: 455px; overflow-y:auto"> 
+            @foreach (var row in AppState.Rows!)
+            {
+                <CartItems Item="@row"/>                
+            }            
+        </MudContainer>
+        <MudStack Row="true" Spacing="1" Justify="Justify.SpaceBetween">
+            <MudText Typo="Typo.h6"><span><strong>Total (NGN)</strong></span></MudText>
+            <MudText Color="Color.Default">@AppState.Rows!.Sum(x => x.Total).ToString("N2")</MudText>
+        </MudStack>
+        <div class="d-flex justify-center">                
+            <MudFab OnClick="@(() => OpenCheckOut())" Color="Color.Primary" Label="Check Out" Size="Size.Medium" Style="Width:250px;"></MudFab>
+        </div>
+    </MudItem>
+</MudGrid>
+

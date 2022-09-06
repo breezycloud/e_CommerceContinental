@@ -1,0 +1,113 @@
+@page "/receipt"
+
+<div id="receipt" dir="ltr" style="width: 80mm;direction: ltr;">
+    <MudGrid Spacing="1" Justify="Justify.Center" >
+        <MudItem xs="12">
+            <MudText Typo="Typo.h5" Align="Align.Center">@AppState!.ReportDataModel!.Employee!.Branch!.BranchName</MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center">@AppState!.ReportDataModel!.Employee!.Branch!.BranchAddress</MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center">                
+                Tel: @AppState!.ReportDataModel!.Employee!.Branch!.PhoneNo1 
+            </MudText>
+        </MudItem>
+        <MudItem xs="12">
+            <MudText Typo="Typo.body2" Align="Align.Center">                
+                Shop: @AppState!.ReportDataModel!.Employee!.EmployeeAccount!.Shop!.ShopName
+            </MudText>
+        </MudItem>
+        <MudItem xs="6" >
+            <div class="d-flex justify-start">
+                <MudText Typo="Typo.caption">
+                    Name: @AppState!.ReportDataModel!.Customer!.CustomerName
+                    Phone No: @AppState!.ReportDataModel!.Customer!.PhoneNo
+                </MudText>            
+            </div>            
+        </MudItem>
+        <MudItem xs="6">
+            <div class="d-flex justify-end">
+                <MudStack Spacing="0">
+                    <MudText Align="Align.End" Typo="Typo.caption">                    
+                        #: @AppState!.ReportDataModel!.Order!.InvoiceNo.ToString().PadLeft(4, '0')
+                    </MudText>
+                    <MudText Align="Align.End" Typo="Typo.caption">                                            
+                        Date: @AppState!.ReportDataModel!.Order!.TransactionDate
+                    </MudText>
+                </MudStack>                
+            </div> 
+        </MudItem>
+        <MudItem Class="pa-0 ma-0" xs="12">  
+            <MudGrid Class="pa-0 ma-0" Spacing="1" Justify="Justify.Center">
+                <MudItem xs="2">
+                    <div class="d-flex justify-center">
+                        <MudText Typo="Typo.caption">Qty</MudText>                
+                    </div>                    
+                </MudItem>
+                <MudItem xs="5">
+                    <MudText Typo="Typo.caption">Item</MudText>
+                </MudItem>
+                <MudItem xs="4">
+                    <div class="d-flex justify-end">
+                        <MudText Typo="Typo.caption">Cost</MudText>
+                    </div>                    
+                </MudItem>
+                @foreach (var row in AppState!.Rows!)
+                {
+                    <MudItem xs="2">
+                        <div class="d-flex justify-center">
+                            <MudText Typo="Typo.caption">
+                                @row.Quantity
+                            </MudText>                
+                        </div>                        
+                    </MudItem>
+                    <MudItem xs="5">                        
+                        <MudText Typo="Typo.caption">
+                            @row!.Product!.ProductName
+                        </MudText>
+                    </MudItem>
+                    <MudItem xs="4">
+                        <div class="d-flex justify-end">
+                            <MudText Typo="Typo.caption">
+                                @row.Cost.ToString("N2")                            
+                            </MudText>
+                        </div>                        
+                    </MudItem>                    
+                }
+            </MudGrid>                                       
+        </MudItem>
+        <MudItem xs="12">
+            <div class="d-flex justify-end">
+                <MudStack Spacing="0" Justify="Justify.FlexEnd">
+                    <MudText Align="Align.Right" Typo="Typo.caption">
+                        Sub Total: @AppState!.Rows!.Sum(x => x.Total).ToString("N2")
+                    </MudText>  
+                    <MudText Align="Align.Right" Typo="Typo.caption">
+                        VAT: @Convert.ToInt16("0").ToString("N2")
+                    </MudText>          
+                    <MudText Align="Align.Right" Typo="Typo.caption">
+                        Total: @string.Format("{0}", (AppState!.Rows!.Sum(x => x.Total) + Convert.ToInt16("0")).ToString("N2"))
+                    </MudText>          
+                </MudStack>
+            </div>            
+        </MudItem>
+        <MudItem xs="12">
+            <div class="d-flex justify-center">
+                <MudPaper Height="150" Width="150">
+                    <MudImage Src="icon-192.png" Width="120" Height="120"/>
+                </MudPaper>
+            </div>
+        </MudItem>
+        <MudItem xs="12">
+            <div class="d-flex justify-center">
+                <MudFab id="hide-print" OnClick="@PrintDialog" Color="Color.Surface" Style="width:200px" Size="Size.Medium" StartIcon="@Icons.Material.Filled.Print" Label="Print"/>
+            </div>
+        </MudItem>
+    </MudGrid>    
+</div>
+
+@code {
+    private void PrintDialog() { 
+        var prevPage = AppState!.ReportDataModel!.PrevPage!;
+        _js.InvokeVoidAsync("printDialog", null);
+        nav.NavigateTo(prevPage, 
+            prevPage == "newsale" ? true : false);
+    }
+}

@@ -1,0 +1,221 @@
+@page "/customer/{isAddEdit:bool}"
+@page "/customer/{isAddEdit:bool}/{Id:guid}"
+@using Handlers
+@layout AppLayout
+@inject ICustomerService CustomerService
+@inject IJSRuntime _js
+@attribute [Authorize(Roles = "Admin, Master, Sales")]
+
+@if (isBusy)
+{
+    <Loader/>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Medium">
+        <EditForm Model="@customer" OnValidSubmit="OnValidSubmit">
+            <DataAnnotationsValidator />
+            <MudGrid>
+                <MudItem xs="12">            
+                    <MudText Typo="Typo.h5">@(isAddEdit ? "New" : "Edit") Customer</MudText>
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" Label="Customer name" @bind-Value="customer.CustomerName"
+                                        For="@(() => customer.CustomerName)" ></MudTextField>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" Label="Contact Number" @bind-Value="customer.PhoneNo"
+                                        For="@(() => customer.PhoneNo)" ></MudTextField>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField Label="Email" Margin="Margin.Dense" @bind-Value="customer.Email" For="@(() => customer.Email)" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" Label="Home Address" @bind-Value="customer.ContactAddress"
+                                        For="@(() => customer.ContactAddress)" Lines="4"></MudTextField>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" Label="Office Address" @bind-Value="customer.OfficeAddress"
+                                        For="@(() => customer.OfficeAddress)" Lines="4" ></MudTextField>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="int" @bind-Value="@customer.Bday" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Birth Day" Max="31"/>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="int" @bind-Value="@customer.Bmonth" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Birth Month" Max="12"/>
+                        </MudItem>                    
+                        <MudItem xs="12" sm="6">
+                            <MudSelect Strict="true" Variant="Variant.Outlined" Margin="Margin.Dense" AnchorOrigin="Origin.BottomCenter"
+                            Label="Religion" @bind-Value="customer.Religion" OffsetY="true" Direction="Direction.Bottom">
+                                @foreach (var religion in religions)
+                                {
+                                    <MudSelectItem Value="@(religion)">@religion</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <AuthorizeView Roles="Master, Admin" Context="Master">
+                            <MudItem xs="12" sm="6">
+                                <MudNumericField T="double?" @bind-Value="@customer.Discount" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Discount" Min="0" Max="100"/>
+                            </MudItem>              
+                        </AuthorizeView> 
+                        @if (!isAddEdit && customer.Orders.Any())                     
+                        {
+                            <MudItem xs="12">
+                                <MudTable Context="Order" Items="customer.Orders" Outlined="true" Elevation="1" Dense="true" Striped="true" Hover="true">
+                                    <ToolBarContent>            
+                                        <MudText Typo="Typo.h6">Transaction History</MudText>                                        
+                                    </ToolBarContent>
+                                    <HeaderContent>
+                                        <MudTh Style="text-align:center;">Receipt #</MudTh>                        
+                                        <MudTh>Date</MudTh>    
+                                        <MudTh Style="text-align:end;">Sub Total</MudTh>
+                                        <MudTh Style="text-align:end;">Total</MudTh>          
+                                        <MudTh Style="text-align:end;">Discount</MudTh>                                                                          
+                                        <MudTh Style="text-align:end;">Paid</MudTh>
+                                        <MudTh Style="text-align:center;">Payment Mode</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="Receipt #" Style="text-align:center;">
+                                            @Order.InvoiceNo.ToString().PadLeft(4, '0')</MudTd>            
+                                        <MudTd DataLabel="Date">@Order.TransactionDate</MudTd>
+                                        <MudTd DataLabel="Sub Total" Style="text-align:end;">@Order.SubTotal.ToString("N2")</MudTd>
+                                        <MudTd DataLabel="Total" Style="text-align:end;">@Order.TotalAmount.ToString("N2")</MudTd>
+                                        <MudTd DataLabel="Discount" Style="text-align:end;">@Order.Discount.ToString("N2")</MudTd>                                        
+                                        <MudTd DataLabel="Paid" Style="text-align:end;">@Order.AmountPaid.ToString("N2")</MudTd>
+                                        <MudTd DataLabel="Payment Mode" Style="text-align:center;">@Order.PaymentMode</MudTd>
+                                    </RowTemplate>
+                                    <PagerContent>
+                                        <MudTablePager/>
+                                    </PagerContent>
+                                </MudTable>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudItem>  
+        </MudGrid>
+        <div class="fabs-container">
+            <MudFab Class="fab" ButtonType="ButtonType.Submit" Color="Color.Primary" 
+                Disabled="@isProcessing" Size="Size.Large" Icon="@Icons.Material.Filled.Save"/>
+        </div>
+    </EditForm>
+    </MudContainer>
+<MudScrollToTop>
+    <MudFab Color="Color.Secondary" Icon="@Icons.Filled.ArrowCircleUp" />
+</MudScrollToTop>
+}
+
+@code {        
+    private bool isBusy, isProcessing, isAddingToList, isDeleting = false;
+    private string ProcessStatus => isProcessing ? "Processing" : "Save";
+    private Customer customer = new();
+    [Parameter] public Guid id { get; set; }
+    [Parameter] public bool isAddEdit { get; set; }
+    private string sizeErrorText = string.Empty;
+    private string partErrorText = string.Empty;    
+    private string groupErrorText = string.Empty;    
+    private bool isReadOnly => isAddEdit ? false : true;
+    private string operationType => isAddEdit ? "Added" : "Edited";
+    MudTextField<string> sizeField = new();    
+    private MudDatePicker picker =new();    
+    private string[] religions = new[]
+    {
+        "Christian",
+        "Muslim",
+        "Rather not say"
+    };    
+    private HubConnection? _hub;
+    protected override async Task OnParametersSetAsync()
+    {
+        isBusy = true;
+        try
+        {            
+            if (isAddEdit)
+            {
+                customer = new();
+            }
+            else
+            {
+                customer.CustomerId = id;
+                customer = await CustomerService.GetCustomer(customer);
+            }            
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine(ex);
+        }                
+        isBusy = false;
+    }    
+
+    private async Task OnValidSubmit()
+    {
+        try
+        {
+            bool success = false;
+            isProcessing = true;
+            var prompt = await Dialog.ShowMessageBox("Confirmation", $"Do you wish to {(isAddEdit ? "Add" : "Edit")} Customer data", yesText:"Yes", cancelText:"No");
+            if (prompt is null)
+            {
+                isProcessing = false;
+                return;
+            }
+            else if (!prompt.Value)
+            {
+                isProcessing = false;
+                return;
+            }            
+            customer.CustomerName = StringConverter.ConvertToTitleCase(customer.CustomerName!);       
+            if (isAddEdit)
+            {
+                var checkExist = await CustomerService.PhoneNumberExist(customer.PhoneNo!);
+                if (!string.IsNullOrEmpty(checkExist.PhoneNo))
+                {
+                    await Dialog.ShowMessageBox("Warning", $"{checkExist.CustomerName} already registered with this Phone No: {checkExist.PhoneNo}");
+                    isProcessing = false;
+                    return;
+                }
+                success = await CustomerService.AddCustomer(customer);
+            }
+            else
+            {                                
+                success = await CustomerService.UpdateCustomer(customer);                                
+            }
+            if (success)
+            {
+                snackBar.Add($"Operation successfull", Severity.Success);
+                ClearSelection();            
+            }                
+            else
+                snackBar.Add($"Error occured", Severity.Error);
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine($"{ex.Message} {ex.Data} {ex.StackTrace} {ex.Source} {ex.InnerException}");
+        }
+        finally
+        {            
+            isProcessing = false;            
+        }
+    }    
+    
+    
+
+    void ClearSelection()
+    {
+        customer = new();        
+        if (!isAddEdit)
+        {
+            nav.NavigateTo("customers");
+        }
+    }
+
+    void BirthDayChanged(DateTime? date)
+    {
+        if (date is not null)
+        {
+            customer.Bday = date.Value.Day;
+            customer.Bmonth = date.Value.Month;
+            picker.ValidationErrors.Clear();
+            StateHasChanged();
+        }       
+    }    
+}

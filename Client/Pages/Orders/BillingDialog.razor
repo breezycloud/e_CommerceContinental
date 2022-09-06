@@ -1,0 +1,38 @@
+<EditForm Model="@customer" OnValidSubmit="CheckOut">
+    <DataAnnotationsValidator/>
+    <MudDialog>
+        <DialogContent>
+            @if (!Customers!.Any())
+            {
+                <Loader/>
+            }
+            else
+            {
+                <MudStack Spacing="2">         
+                    <div class="d-flex justify-end">
+                        <MudButton Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Add">New Customer</MudButton>
+                    </div>
+                    <MudAutocomplete Label="Customer" T="Customer" @bind-Value="customer" SearchFunc="@Search"
+                                             Variant="Variant.Outlined" Immediate="true" CoerceValue="true"
+                                             ToStringFunc="@(e => e == null ? null : $"{e.CustomerName}")" />
+                    <MudTextField Label="Mobile Number" ReadOnly="true" @bind-Value="customer!.PhoneNo" Variant="Variant.Outlined">@customer!.PhoneNo</MudTextField>
+                    <MudText Typo="Typo.h6" Align="Align.Left">Payment Mode</MudText>
+                    <div class="d-flex justify-center">
+                        <MudRadioGroup  @bind-SelectedOption="PaymentMode">
+                            <MudRadio Option="@("Cash")" Color="Color.Primary" Dense="true">Cash</MudRadio>
+                            <MudRadio Option="@("Cheque")" Color="Color.Secondary" Dense="true">Cheque</MudRadio>
+                            <MudRadio Option="@("POS")" Color="Color.Tertiary" Dense="true">POS</MudRadio>
+                            <MudRadio Option="@("Transfer")" Color="Color.Info" Dense="true">Transfer</MudRadio>
+                        </MudRadioGroup>
+                    </div>
+                </MudStack>
+            }
+            <ValidationSummary/>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="CancelPayment"Color="Color.Default">Cancel</MudButton>
+            <MudButton Disabled="isProcessing" ButtonType="ButtonType.Submit" Color="Color.Primary">@(isProcessing ? "Processing" : "Save")</MudButton>
+        </DialogActions>
+    </MudDialog>
+</EditForm>
+

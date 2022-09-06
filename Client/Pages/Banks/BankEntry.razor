@@ -1,0 +1,93 @@
+@using Handlers
+@inject NavigationManager nav
+@inject ISnackbar snackBar
+@inject IDialogService Dialog
+@inject IBankService BankService
+
+<EditForm EditContext="context" OnValidSubmit="Save">
+        <DataAnnotationsValidator/>    
+        <MudDialog>
+            <TitleContent>
+                <MudText>@string.Format("{0} Bank", isAdd ? "Add" : "Edit")</MudText>
+            </TitleContent>
+            <DialogContent>
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="Bank.BankName" Label="Bank Name" Margin="Margin.Dense" Variant="Variant.Text" For="@(() => Bank.BankName)"></MudTextField>      
+                    </MudItem>
+                    <MudItem xs="12">                        
+                        <MudTextField @bind-Value="Bank.BankCode" Label="Sort Code" Lines="4" Variant="Variant.Text"></MudTextField>      
+                    </MudItem>                      
+                </MudGrid>
+            </DialogContent>
+            <DialogActions>
+                <MudButton OnClick="Cancel">Close</MudButton>
+                <MudButton Disabled="isProcessing"ButtonType="ButtonType.Submit" Variant="Variant.Filled" 
+                    Color="Color.Primary" >@(isProcessing ? "Processing" : "Save")</MudButton>
+            </DialogActions>
+        </MudDialog>    
+    </EditForm>
+
+@code {
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }    
+    [Parameter] public Bank Bank { get; set; } = new();            
+    [Parameter] public bool isAdd { get; set; } = true;
+    private bool isProcessing = false;
+    EditContext? context = null;
+    private HubConnection? hub;
+    protected override Task OnParametersSetAsync()
+    {
+        hub = new HubConnectionBuilder().WithAutomaticReconnect().WithUrl(nav.ToAbsoluteUri("/hubs")).Build();
+        hub!.StartAsync();
+        context = new EditContext(Bank);        
+        return base.OnParametersSetAsync();
+    }
+    void Cancel() => MudDialog!.Close(DialogResult.Ok(true));
+    async Task Save()
+    {
+        isProcessing = true;
+        var result = await Dialog.ShowMessageBox("Confirmation",
+        $"Do you wish to save", yesText: "Yes", cancelText: "No");
+        if (result is null)
+        {
+            isProcessing= false;
+            return;        
+        }
+        else if (!result.Value)
+        {
+            isProcessing = false;
+            return;
+        }        
+        try
+        {      
+            Bank.ModifiedDate = DateTime.Now;
+            Bank.BankName = StringConverter.ConvertToTitleCase(Bank.BankName!);            
+            bool isDone = false;
+            if (isAdd)                            
+                isDone = await BankService.AddBank(Bank);
+            else
+                isDone = await BankService.UpdateBank(Bank);
+            
+            if (isDone)
+            {                
+                snackBar.Add("Bank Successfully Saved", Severity.Success);                        
+                await hub!.SendAsync("UpdateBanksTable");
+                if (isAdd)
+                    Bank = new();
+                else
+                {
+                    Cancel();                    
+                }                
+            }                
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            snackBar.Add("Operation failed", Severity.Error);            
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }    
+}

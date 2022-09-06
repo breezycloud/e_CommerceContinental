@@ -1,0 +1,90 @@
+@attribute [Authorize]
+<MudStack Spacing="1" Justify="Justify.Center">
+    <MudText Align="Align.Center" Typo="Typo.h6" Style="font-weight: 200;">Overall Sales</MudText>
+    <MudChart ChartType="ChartType.Line" ChartSeries="@Series" XAxisLabels="@XAxisLabels" Width="100%" Height="350px"></MudChart>
+</MudStack>
+@code {
+    [Parameter] public OrderLineChart[]? Orders { get; set; }
+    protected override async Task OnParametersSetAsync()
+    {
+        await AppendChartData(Orders!);
+    }
+
+
+    public List<ChartSeries> Series = new List<ChartSeries>();
+
+    public string[] XAxisLabels = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+
+    private async ValueTask<IList<YearMonth>> EvaluateData(List<Order> orders)
+    {
+        IList<YearMonth> yearMonths = new List<YearMonth>();
+        var years = orders.GroupBy(x => new { x.TransactionDate.Year, x.TransactionDate.Month }).Select(y => new
+        {
+            y.Key.Year,
+            y.Key.Month,
+            Sales = y.Count(x => x.TransactionDate.Month == y.Key.Month && x.TransactionDate.Year == y.Key.Year)
+        }).ToList();
+
+        foreach (var item in years)
+        {
+            if (item is null)
+                continue;
+            yearMonths.Add(new YearMonth
+            {
+                Year = item.Year,
+                Month = item.Month,
+                Sales = item.Sales
+            });
+            Console.WriteLine($"Year {item.Year}, Month {item.Month}, Sales {item.Sales}");
+        }
+        return await ValueTask.FromResult(yearMonths);
+    }
+
+    private async ValueTask AppendChartData(OrderLineChart[] yearMonths)
+    {
+        Series = new List<ChartSeries>();
+        var distinctYears = yearMonths.Select(x => x.Year).Distinct().ToList();
+        for (int i = 0; i < distinctYears.Count; i++)
+        {
+            var yearValue = distinctYears[i];
+            var yearSales = yearMonths.Where(x => x.Year == yearValue).ToList();
+            Series.Add(new ChartSeries()
+            {
+                Name = yearValue.ToString(),
+                Data = new double[12]
+            });
+            int iMonth = 1;
+            for (int y = 0; y < 12; y++)
+            {
+                var value = yearSales.Where(v => v.Year == yearValue && v.Month == iMonth).FirstOrDefault();
+                if (value is null)
+                {
+                    Series[i].Data[y] = 0;
+                    iMonth++;
+                    continue;
+                }
+                else
+                {
+                    Series[i].Data[y] = double.Parse(value!.TotalSales!.ToString()!);
+                    iMonth++;
+                }
+            }
+
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private class YearMonth
+    {
+        public int Year { get; set; }
+        public int Month { get; set; }
+        public int? Sales { get; set; }
+    }
+
+    private class YearlySales
+    {
+        public int Year { get; set; }
+        public double[]? TotalSales { get; set; }
+    }
+}

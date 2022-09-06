@@ -1,0 +1,110 @@
+@if (Response is null)
+{
+    <MudGrid>
+        <MudItem xs="12" sm="2" md="2">
+            <MudSkeleton Animation="Animation.Wave" SkeletonType="SkeletonType.Rectangle" Height="100px;" />
+        </MudItem>
+        <MudItem xs="12" sm="2" md="2">
+            <MudSkeleton Animation="Animation.Wave" SkeletonType="SkeletonType.Rectangle" Height="100px;" />
+        </MudItem>
+        <MudItem xs="12" sm="2" md="2">
+            <MudSkeleton Animation="Animation.Wave" SkeletonType="SkeletonType.Rectangle" Height="100px;" />
+        </MudItem>
+        <MudItem xs="12" sm="2" md="2">
+            <MudSkeleton Animation="Animation.Wave" SkeletonType="SkeletonType.Rectangle" Height="100px;" />
+        </MudItem>
+        <MudItem xs="12" sm="2" md="2">
+            <MudSkeleton Animation="Animation.Wave" SkeletonType="SkeletonType.Rectangle" Height="100px;" />
+        </MudItem>
+        <MudItem xs="12" sm="2" md="2">
+            <MudSkeleton Animation="Animation.Wave" SkeletonType="SkeletonType.Rectangle" Height="100px;" />
+        </MudItem>
+        <MudItem xs="12" sm="8" md="6">
+            <MudSkeleton Animation="Animation.Pulse" SkeletonType="SkeletonType.Rectangle" Height="350px;" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudSkeleton Animation="Animation.Wave" SkeletonType="SkeletonType.Circle" Width="450px" Height="350px" />
+        </MudItem>
+    </MudGrid>
+}
+else
+{
+    <MudGrid>             
+        <MudItem xs="12" sm="2" md="2">
+            <MudPaper Class="d-flex flex-row pt-6 pb-4" Style="height:100px;" Outlined="true">
+                <MudIcon Icon="@Icons.Material.Filled.OtherHouses" Color="Color.Primary" Class="mx-4" Style="width:50px; height:50px;"></MudIcon>
+                <div style="width:100%;">
+                    <MudText Typo="Typo.h6" Class="mud-text-secondary mb-n1">Branches</MudText>
+                    <MudText Class="d-flex justify-end pa-3" Typo="Typo.h6">@Response!.TopChartData!.TotalBranches</MudText>
+                </div>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="2" md="2">
+            <MudPaper Class="d-flex flex-row pt-6 pb-4" Style="height:100px;" Outlined="true">
+                <MudIcon Icon="@Icons.Material.Filled.OtherHouses" Color="Color.Warning" Class="mx-4" Style="width:50px; height:50px;"></MudIcon>
+                <div style="width:100%;">
+                    <MudText Typo="Typo.h6" Class="mud-text-secondary mb-n1">Shops</MudText>
+                    <MudText Class="d-flex justify-end pa-3" Typo="Typo.h6">@Response!.TopChartData!.TotalShops</MudText>
+                </div>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="2" md="2">
+            <MudPaper Class="d-flex flex-row pt-6 pb-4" Style="height:100px;" Outlined="true">
+                <MudIcon Icon="@Icons.Material.Filled.PeopleOutline" Color="Color.Secondary" Class="mx-4" Style="width:50px; height:50px;"></MudIcon>
+                <div style="width:100%;">
+                    <MudText Typo="Typo.h6" Class="mud-text-secondary mb-n1">Employees</MudText>
+                    <MudText Class="d-flex justify-end pa-3" Typo="Typo.h6">@Response!.TopChartData!.TotalEmployees</MudText>
+                </div>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="2" md="2">
+            <MudPaper Class="d-flex flex-row pt-6 pb-4" Style="height:100px;" Outlined="true">
+                <MudIcon Icon="@Icons.Material.Filled.PeopleOutline" Color="Color.Tertiary" Class="mx-4" Style="width:50px; height:50px;"></MudIcon>
+                <div style="width:100%;">
+                    <MudText Typo="Typo.h6" Class="mud-text-secondary mb-n1">Customers</MudText>
+                    <MudText Class="d-flex justify-end pa-3" Typo="Typo.h6">@Response!.TopChartData!.TotalCustomers</MudText>
+                </div>
+            </MudPaper>
+        </MudItem>   
+        <MudItem xs="12" sm="2" md="2">
+            <MudPaper Class="d-flex flex-row pt-6 pb-4" Style="height:100px;" Outlined="true">
+                <MudIcon Icon="@Icons.Material.Filled.Category" Color="Color.Error" Class="mx-4" Style="width:50px; height:50px;"></MudIcon>
+                <div style="width:100%;">
+                    <MudText Typo="Typo.h6" Class="mud-text-secondary mb-n1">Products</MudText>
+                    <MudText Class="d-flex justify-end pa-3"Typo="Typo.h6">@Response!.TopChartData!.TotalProducts</MudText>
+                </div>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="2" md="2">
+            <MudPaper Class="d-flex flex-row pt-6 pb-4" Style="height:100px;" Outlined="true">
+                <MudIcon Icon="@Icons.Material.Filled.Analytics" Color="Color.Dark" Class="mx-4" Style="width:50px; height:50px;"></MudIcon>
+                <div style="width:100%;">
+                    <MudText Typo="Typo.h6" Class="mud-text-secondary mb-n1">Total Sales</MudText>
+                    <MudText Class="d-flex justify-end pa-3"Typo="Typo.h6">@Response!.TopChartData!.TotalSales</MudText>
+                </div>
+            </MudPaper>   
+        </MudItem>
+        <MudItem xs="12" sm="8" md="6">
+            @if (Response!.OrdersLineChart is not null)
+            {
+                <ProductsLineChartView Orders="Response!.OrdersLineChart"/>
+            }            
+        </MudItem> 
+        <MudItem xs="12" sm="6">
+            @if (Response!.ProductsPieCharts is not null)  
+            {
+                <TopSoldProducts Data="Response!.ProductsPieCharts"/>
+            }
+        </MudItem>                       
+    </MudGrid>
+}
+@code {
+    [Parameter] public DashboardResponse? Response { get; set; }
+    [Parameter] public bool IsLoading { get; set; } = false;
+    protected override async Task OnParametersSetAsync()
+    {
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+}

@@ -1,0 +1,21 @@
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2" Justify="Justify.Center">
+            <div class="d-flex justify-center">
+                <MudRadioGroup @bind-SelectedOption="ReportType">
+                    <MudRadio Option="@("Date")" Color="Color.Primary" Dense="true">Date</MudRadio>
+                    <MudRadio Option="@("Range")" Color="Color.Secondary" Dense="true">Range</MudRadio>
+                </MudRadioGroup>
+            </div>                        
+            <MudDatePicker Variant="Variant.Outlined" Label="Start Date" @bind-Date="startDate" AutoClose="true"/>
+            <div style="@(ReportType == "Date" ? "visibility:hidden;" : "visibility:visible;")">
+                <MudDatePicker Variant="Variant.Outlined" Label="End Date" @bind-Date="endDate" AutoClose="true"/>
+            </div>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel"Color="Color.Default">Cancel</MudButton>
+        <MudButton OnClick="PrintReport" Disabled="isProcessing" Color="Color.Primary">@(isProcessing ? "Processing" : "Preview")</MudButton>
+    </DialogActions>
+</MudDialog>
+

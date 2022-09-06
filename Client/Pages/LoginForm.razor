@@ -1,0 +1,103 @@
+@layout LoginLayout
+@page "/"
+@inject CustomAuthenticationStateProvider authStateProvider
+@inject IUserService userService
+
+<div class="container-login">
+    <div class="wrap-login100">
+        <EditForm Model="@loginModel" OnValidSubmit="@AuthenticateUser">
+            <DataAnnotationsValidator />
+            <MudGrid Justify="Justify.Center">
+                <MudItem xs="12">
+                    <div class="login-head">
+                        <svg width="5em" height="5em" viewBox="0 0 16 16" class="bi bi-person-circle" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M13.468 12.37C12.758 11.226 11.195 10 8 10s-4.757 1.225-5.468 2.37A6.987 6.987 0 0 0 8 15a6.987 6.987 0 0 0 5.468-2.63z" />
+                            <path fill-rule="evenodd" d="M8 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+                            <path fill-rule="evenodd" d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8z" />
+                        </svg>
+                        <MudText Typo="Typo.h5">Sign in</MudText>
+                    </div>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="loginModel.Username" Variant="Variant.Outlined"
+                                    Placeholder="Username" For="@(() => loginModel.Username)">
+
+                    </MudTextField>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="loginModel.Password" Variant="Variant.Outlined"
+                                    Adornment="Adornment.End" Placeholder="Password"
+                                    For="@(() => loginModel.Password)" InputType="@PasswordInput"
+                                    AdornmentIcon="@PasswordInputIcon" OnAdornmentClick="PasswordVisibilityClick">
+                    </MudTextField>
+                </MudItem>
+                <MudItem xs="12">
+                    <div class="login-head">
+                        <MudFab Disabled="@isProcessing" ButtonType="ButtonType.Submit" Color="Color.Primary" Label="@(isProcessing ? "Processing" : "Login")" Size="Size.Medium" Style="width:200px;">
+                        </MudFab>
+                    </div>
+                </MudItem>                    
+            </MudGrid>
+        </EditForm>
+    </div>
+</div>
+
+
+@code {
+    private bool isProcessing, isShow = false;
+    private LoginModel loginModel = new();
+
+    string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+    InputType PasswordInput = InputType.Password;
+
+
+    void PasswordVisibilityClick()
+    {
+        if (isShow)
+        {
+            isShow = false;
+            PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+            PasswordInput = InputType.Password;
+        }
+        else
+        {
+            isShow = true;
+            PasswordInputIcon = Icons.Material.Filled.Visibility;
+            PasswordInput = InputType.Text;
+        }
+    }
+
+
+    private async Task AuthenticateUser()
+    {
+        isProcessing = true;
+        try
+        {
+            var response = await userService.Login(loginModel);
+            if (response == null)
+            {
+                snackBar.Add("Invalid login credentials", Severity.Error, option =>
+                {
+                    option.CloseAfterNavigation = true;
+                });
+            }
+            else
+            {
+                await authStateProvider.SetTokenAsync(response);
+                if (loginModel.AccessPrivilege == "Store")
+                    nav.NavigateTo("/");
+                else
+                    nav.NavigateTo("/index", true);
+            }
+        }
+        catch
+        {
+            snackBar.Add("Invalid login credentials", Severity.Error, option =>
+            {
+                option.CloseAfterNavigation = true;
+            });
+        }
+        isProcessing = false;
+    }
+}
+

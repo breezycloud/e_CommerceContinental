@@ -1,0 +1,39 @@
+@layout MainLayout
+@inject ILocalStorageService _localStorage
+@inject ISnackbar SnackBar
+@inject BackgroundTask _BackgroundTask
+@inject IJSRuntime _js
+@implements IDisposable
+
+@if (_newVersionAvailable)
+{     
+    <div class="update-button">
+        <MudPaper Width="400px" Class="pa-4 mud-theme-primary">
+            <MudText Align="Align.Center">A new version is available. <button type="button" @onclick="UpdateApp">Click here to reload🔄️</button></MudText>        
+        </MudPaper>          
+    </div>    
+}
+
+@code {
+
+    private bool _newVersionAvailable = false;
+
+    protected override void OnInitialized()
+    {                        
+        _BackgroundTask.JobExecuted += UpdateAvailableNotification!;
+    }    
+
+    private async void UpdateAvailableNotification(object source, JobExecutedEventArgs e)
+    {  
+        _newVersionAvailable = await _localStorage.GetItemAsync<bool>("new-version");
+        await InvokeAsync(StateHasChanged);        
+    }
+
+    private async Task UpdateApp()
+    {
+        await _js.InvokeVoidAsync("restartApp");
+    }
+
+    public void Dispose() => _BackgroundTask.JobExecuted -= UpdateAvailableNotification!;
+}
+

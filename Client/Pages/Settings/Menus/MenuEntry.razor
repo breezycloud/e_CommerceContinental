@@ -1,0 +1,77 @@
+<EditForm Model="menu" OnValidSubmit="@AddMenu">
+    <DataAnnotationsValidator/>
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">            
+                Menu Entry
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudStack Spacing="2">
+                <MudTextField Style="text-align:center;" @bind-Value="TotalMenus" Variant="Variant.Outlined" Label="Order" ReadOnly="true"/>
+                <MudTextField @bind-Value="menu!.MenuName" Label="Menu Name" Variant="Variant.Outlined" For="@(() => menu!.MenuName)"/>
+                <MudTextField @bind-Value="menu!.ModifiedDate" Style="text-align:center;" Label="Last Modified" ReadOnly="true" Variant="Variant.Outlined"/>
+            </MudStack>        
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="CloseMenuDialog" Disabled="@isProcessing" Variant="Variant.Text" Color="Color.Default" Class="px-10">Cancel</MudButton>
+            <MudButton ButtonType="ButtonType.Submit" Disabled="@isProcessing" Variant="Variant.Filled" Class="px-10" Color="Color.Primary">@(isProcessing ? "Processing" : "Save")</MudButton>
+        </DialogActions>    
+    </MudDialog>
+</EditForm>
+
+@code {
+    [CascadingParameter] MudDialogInstance? DialogInstance { get; set; }
+    [Parameter] public Menu? menu { get; set; }
+    [Parameter] public int TotalMenus { get; set; }
+    [Parameter] public bool SaveType { get; set; } = false;
+    private bool isProcessing { get; set; } = false;    
+    void CloseMenuDialog() => DialogInstance?.Close(DialogResult.Ok(true));
+    private HubConnection? hub;
+    protected override async Task OnParametersSetAsync()
+    {
+        TotalMenus = SaveType ? TotalMenus : menu!.Order;
+        hub = new HubConnectionBuilder().WithUrl(nav.ToAbsoluteUri("/hubs")).WithAutomaticReconnect().Build();
+        await hub!.StartAsync();        
+    }
+    
+    private async Task AddMenu()
+    {
+        var prompt = await Dialog.ShowMessageBox("Confirmation", "Do you wish save?", yesText:"Yes", cancelText:"No");
+        if (prompt is null || !prompt.Value)
+        {
+            isProcessing = false;
+            return;
+        }
+        var success = false;
+        try
+        {
+            if (SaveType)
+            {
+                success = await MenuService.AddMenu(menu!); 
+                TotalMenus++;               
+            }                
+            else 
+            {
+                success = await MenuService.EditMenu(menu!);
+            }                   
+            if (success)
+            {
+                snackBar.Add("Menu Successfully Saved", Severity.Success);
+                menu = new();
+                await hub!.SendAsync("UpdateMenusData");
+            }
+            else
+            {
+                snackBar.Add("Error Occurred While Saving", Severity.Error);
+                nav.NavigateTo("accesslevels");
+            }
+        }
+        catch (Exception ex)
+        {
+            snackBar.Add("Error Occurred While Saving", Severity.Error);
+            isProcessing = false;
+            Console.WriteLine(ex);
+        }
+    }
+}

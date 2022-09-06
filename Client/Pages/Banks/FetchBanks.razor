@@ -1,0 +1,110 @@
+@layout AppLayout
+@page "/banks"
+@attribute [Authorize]
+
+
+<MudText Typo="Typo.h5">Manage Banks</MudText>
+@if (banks is null)
+{
+    <Loader/>
+}
+else
+{
+    <MudTable @ref="_table" Items="banks" Outlined="true" Elevation="2" Dense="true">
+        <ToolBarContent>
+            <MudText Typo="@Typo.h6">Banks</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Bank</MudTh>            
+            <MudTh>Code</MudTh>
+            <MudTh>Last Modified</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Bank">
+                @context.BankName
+            </MudTd>
+            <MudTd DataLabel="Code">
+                @context.BankCode
+            </MudTd>
+            <MudTd DataLabel="Last Modified">
+                @context.ModifiedDate
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <MudFab Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Edit" OnClick="@(() => Edit(context))" />
+                <MudFab Disabled="@isDeleting" Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.Delete" OnClick="@(() => Delete(context))"/>                    
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+    <div class="fabs-container">
+        <MudTooltip Text="Add" Duration="1000">
+            <MudFab Class="fab" OnClick="@(() => { Dialog.Show<BankEntry>("", options); } )" Color="Color.Primary" Icon="@Icons.Material.Filled.Add" />        
+        </MudTooltip>
+    </div>
+}
+
+@code{
+    private string searchString = string.Empty;
+    private bool isDeleting = false;
+    private Bank[]? banks;
+    DialogOptions options = new DialogOptions { CloseButton = true };
+    private HubConnection? hub;
+    private MudTable<Bank>? _table;
+    protected override async Task OnParametersSetAsync()
+    {
+        hub = new HubConnectionBuilder().WithAutomaticReconnect().WithUrl(nav.ToAbsoluteUri("/hubs")).Build();
+        hub.On("UpdateBanks", async () => 
+        {
+            await GetBanks();
+            StateHasChanged();
+        });
+        await hub.StartAsync();        
+        await GetBanks();
+    }
+
+    private async Task GetBanks()
+    {
+        banks = (await BankService.GetBanks()).ToArray();
+    }
+
+    void Edit(Bank bank)
+    {        
+        var parameters = new DialogParameters
+        {  
+            ["Bank"] = bank, 
+            ["isAdd"] = false            
+        };
+        Dialog.Show<BankEntry>("", parameters: parameters, options);
+    }
+
+    private async Task Delete(Bank bank)
+    {
+        isDeleting = true;
+        var prompt = await Dialog.ShowMessageBox("Confirmation", "Do you wish to delete", yesText:"Yes", cancelText:"No");
+        if (prompt is null)
+        {
+            isDeleting = false;
+            return;
+        }
+        try
+        {
+            await BankService.DeleteBank(bank);
+            snackBar.Add("Bank Successfully Delete", Severity.Success);
+            await OnParametersSetAsync();
+        }
+        catch
+        {
+            snackBar.Add("An Error Occured", Severity.Error);
+        }
+        finally
+        {
+            isDeleting = false;
+        }        
+    }
+}

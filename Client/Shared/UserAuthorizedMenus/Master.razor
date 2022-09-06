@@ -1,0 +1,88 @@
+<MudButton Link="/index" Color="Color.Inherit" Class="mx-1 px-3" Variant="Variant.Text">Dashboard</MudButton>    
+<MudButton Link="/customers" Color="Color.Inherit" Class="mx-1 px-3" Variant="Variant.Text">Customers</MudButton>
+<MudButton Link="/sales" Color="Color.Inherit" Class="mx-1 px-3" Variant="Variant.Text">Sales</MudButton>
+<MudMenu @ref="InventoryMenu" Color="Color.Inherit" Variant="Variant.Text" Class="mx-1 px-3"  PopoverClass="docs-layout-menu-shadow" ListClass="d-flex px-4 pb-2 docs-appbar-special-menu" LockScroll="true" Label="Inventory" EndIcon="@Icons.Filled.KeyboardArrowDown" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
+    <MudList Clickable="true">
+        <MudListSubheader>
+            Inventory
+        </MudListSubheader>            
+        <MudListItem OnClick="@(() => Nav("categories", "Inventory"))">
+            <div class="d-flex">
+                <MudText Color="Color.Primary">Category</MudText>
+            </div>
+            <MudText Typo="Typo.body2">Manage Inventory Category</MudText>
+        </MudListItem> 
+        <MudListItem OnClick="@(() => Nav("products", "Inventory"))">
+            <div class="d-flex">
+                <MudText Color="Color.Dark">Products</MudText>
+            </div>
+            <MudText Typo="Typo.body2">Manage Inventory Products</MudText>
+        </MudListItem>                 
+    </MudList>
+    @* <MudList Clickable="true" Class="relative">
+        <MudListSubheader>
+            Inventory
+        </MudListSubheader>
+        <MudListItem OnClick="@(() => Nav("categories", "services"))">                
+            <div class="d-flex mr-16">
+                <MudText Color="Color.Secondary">Category</MudText>            
+            </div>                
+            <MudText Typo="Typo.body2">Manage Inventory Category</MudText>
+        </MudListItem>   
+        <MudListItem OnClick="@(() => Nav("products", "services"))">                
+            <div class="d-flex mr-16">
+                <MudText Color="Color.Success">Products</MudText>            
+            </div>                
+            <MudText Typo="Typo.body2">Manage Inventory Stock</MudText>
+        </MudListItem>            
+    </MudList> *@
+</MudMenu>  
+<MudButton Link="/employees" Color="Color.Inherit" Class="mx-1 px-3" Variant="Variant.Text">Users</MudButton>
+<MudMenu @ref="SettingsMenu" Color="Color.Inherit" Variant="Variant.Text" Class="mx-1 px-3" PopoverClass="docs-layout-menu-shadow" ListClass="d-flex px-4 pb-2 docs-appbar-special-menu" LockScroll="true" Label="Settings" EndIcon="@Icons.Filled.KeyboardArrowDown" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
+    <MudList Clickable="true">
+        <MudListSubheader>
+            User Permission
+        </MudListSubheader>            
+        <MudListItem OnClick="@(() => Nav("accesslevels", "settings"))">
+            <div class="d-flex">
+                <MudText Color="Color.Success">Access</MudText><MudText Color="Color.Secondary">Permission</MudText>
+            </div>
+            <MudText Typo="Typo.body2">Manage Access Permissions</MudText>
+        </MudListItem>            
+        <MudListItem OnClick="@(() => Nav("roles", "settings"))">
+            <div class="d-flex">
+                <MudText Color="Color.Secondary">User</MudText><MudText Color="Color.Dark">Roles</MudText>
+            </div>
+            <MudText Typo="Typo.body2">Manage System Roles</MudText>
+        </MudListItem>            
+        <MudListItem OnClick="@(() => Nav("roles", "settings"))">
+            <div class="d-flex">
+                <MudText Color="Color.Tertiary">User</MudText><MudText Color="Color.Surface">Persmissions</MudText>
+            </div>
+            <MudText Typo="Typo.body2">Manage User System Permissions</MudText>
+        </MudListItem>            
+    </MudList>
+    <MudList Clickable="true" Class="relative">
+        <MudListSubheader>
+            Company
+        </MudListSubheader>
+        <MudListItem OnClick="@(() => Nav("company", "settings"))">                
+            <div class="d-flex mr-16">
+                <MudText Color="Color.Primary">Company</MudText><MudText Color="Color.Tertiary">Setting</MudText>
+            </div>                
+            <MudText Typo="Typo.body2">Manage Company Settings</MudText>
+        </MudListItem>                   
+        <MudListItem OnClick="@(() => Nav("banks", "settings"))">
+            <div class="d-flex">
+                <MudText Color="Color.Dark">Banks</MudText>
+            </div>
+            <MudText Typo="Typo.body2">Manage Banks List</MudText>
+        </MudListItem>                             
+        <MudListItem OnClick="@(() => Nav("branches", "settings"))">
+            <div class="d-flex">
+                <MudText Color="Color.Primary">Branch</MudText>
+            </div>
+            <MudText Typo="Typo.body2">Manage Company Branch</MudText>
+        </MudListItem>                        
+    </MudList>
+</MudMenu>

@@ -1,0 +1,66 @@
+<MudCard Outlined="true">
+    <MudCardContent>        
+        <MudStack Row="true" Spacing="2" Justify="Justify.SpaceBetween">      
+            <strong>@Item!.Product!.ProductName</strong>
+            <MudTooltip Duration="1000" Text="Remove Item">
+                <MudIconButton Color="Color.Error" OnClick="@(() => RemoveItem(Item))" Icon="@Icons.Material.Filled.Delete" Size="Size.Small"/>
+            </MudTooltip>
+        </MudStack>
+        <MudStack Row="true" Spacing="2" Justify="Justify.SpaceBetween">            
+            <MudText Typo="Typo.caption">x<strong>@(Item!.Quantity)</strong>
+                <span>
+                    <MudTooltip Duration="1000" Text="Reduce Quantity">
+                        <MudIconButton OnClick="@(() => RemoveQuantity(Item))" Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small"/>
+                    </MudTooltip>                    
+                    <MudTooltip Duration="1000" Text="Add Quantity">
+                        <MudIconButton OnClick="@(() => AddQuantity(Item))" Icon="@Icons.Material.Filled.ExpandLess" Size="Size.Small"/>
+                    </MudTooltip>                    
+                </span>
+            </MudText>
+            <MudText Typo="Typo.caption"><strong>@(Item!.Total.ToString("N2"))</strong></MudText>
+        </MudStack>
+    </MudCardContent>
+</MudCard>
+
+
+@code {
+    [Parameter] public CartRow? Item { get; set; } = default!;
+
+    protected override void OnParametersSet()
+    {
+        AppState!.OnUpdate += StateHasChanged;
+    }
+
+    private async Task AddQuantity(CartRow item)    
+    {
+        if (AppState!.Products!.Where(x => x.Id == item.Product!.Id).First().StocksOnHand == 0)
+        {
+            snackBar.Add("Item is out of stock", Severity.Warning);
+            return;
+        }
+        Item!.Quantity += 1;
+        AppState!.Products!.Where(x => x.Id == item.Product!.Id).First().StocksOnHand -= 1;
+        await AppState!.OnNotify();
+    }
+
+    private async Task RemoveQuantity(CartRow item)    
+    {
+        Item!.Quantity -= 1;
+        if (Item!.Quantity == 0)
+            AppState!.Rows!.Remove(item);        
+        AppState!.Products!.Where(x => x.Id == item.Product!.Id).First().StocksOnHand += 1;
+        await AppState!.OnNotify();
+    }
+
+    private async Task RemoveItem(CartRow row)
+    {
+        var prompt = await Dialog.ShowMessageBox("Confirmation", "Do you wish to remove item", yesText:"Yes", noText:"No");
+        if (prompt is null || !prompt.Value)
+            return;            
+        AppState!.Rows!.Remove(row);        
+        AppState!.Products!.Where(x => x.Id == row.Product!.Id).First().StocksOnHand += row.Quantity;
+        await AppState!.OnNotify();
+    }
+    
+}
+

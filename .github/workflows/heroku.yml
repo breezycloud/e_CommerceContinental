@@ -1,0 +1,24 @@
+name: "CI & CD"
+
+on:
+  push:
+    branches: [ main ]
+
+
+env:
+  HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:  
+      - uses: actions/checkout@v1
+      - name: Login to Heroku
+        run: heroku container:login
+
+      - name: Build and Push
+        run: heroku container:push -a kasuwarzamani web
+
+      - name: Deploy
+        run: heroku container:release -a kasuwarzamani web

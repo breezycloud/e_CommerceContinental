@@ -1,0 +1,263 @@
+﻿@page "/manageorder/{orderid:guid}"
+@layout AppLayout
+@attribute [Authorize]
+
+<MudText Typo="Typo.h5">Manage Order</MudText>
+@if (IsLoading)
+{
+    <Loader />
+}
+else
+{
+    <MudGrid Spacing="1" Justify="@Justify.SpaceEvenly">
+        <MudItem xs="12" sm="6">
+            <MudTextField Label="Customer Name" Variant="Variant.Outlined" ReadOnly="true" @bind-Value="Order!.Customer!.CustomerName" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField Label="Order Date" Variant="Variant.Outlined" ReadOnly="true" @bind-Value="Order!.TransactionDate" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField Label="Total Amount" Format="N2" Variant="Variant.Outlined" ReadOnly="true" @bind-Value="Order.TotalAmount" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField Label="Sub Total" Format="N2" Variant="Variant.Outlined" ReadOnly="true" Value="Order.SubTotal" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField Label="Discount" Format="N2" Variant="Variant.Outlined" ReadOnly="false" @bind-Value="Order.Discount" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField Label="Amount Paid" Format="N2" ReadOnly="true" Variant="Variant.Outlined" @bind-Value="Order.AmountPaid" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField Label="Balance" Format="N2" Variant="Variant.Outlined" ReadOnly="true" Value="Order.Balance" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField Label="Payment Mode" Variant="Variant.Outlined" ReadOnly="true" @bind-Value="Order.PaymentMode" />
+        </MudItem>
+        @* <MudItem xs="12" sm="6" Style="@(Order!.Balance > 0 ? "visibility:visible;" : "visibility:hidden;")">
+            <MudSelect Dense="true" AnchorOrigin="Origin.BottomCenter" T="string" Strict="true" Variant="Variant.Outlined" Required="true"
+                    @bind-Value="PaymentMode" Label="New Payment Mode">
+                <MudSelectItem Value="@("Cash")">Cash</MudSelectItem>
+                <MudSelectItem Value="@("Transfer")">Transfer</MudSelectItem>
+                <MudSelectItem Value="@("POS")">POS</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6" Style="@(Order!.Balance > 0 ? "visibility:visible;" : "visibility:hidden;")">
+            <MudTextField Label="New Pay Amount" Format="N2" Variant="Variant.Outlined" @bind-Value="NewPay" />
+        </MudItem>
+        <MudItem xs="12" sm="6" Style="@(Order!.Balance > 0 ? "visibility:visible;" : "visibility:hidden;")">
+            <MudTextField Label="New Balance" Immediate="true" Format="N2" Variant="Variant.Outlined" ReadOnly="true" Value="@(Order.Balance - NewPay)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" Style="@(Order!.Balance > 0 ? "visibility:visible;" : "visibility:hidden;")">
+            <div class="d-flex align-center justify-end pa-3">
+                <MudTooltip Text="Save Payment" Duration="2000">
+                    <MudButton OnClick="@(async () => await UpdatePayment())" 
+                        EndIcon="@Icons.Material.Filled.Payment" 
+                        Style="width: 200px;" Variant="Variant.Outlined" 
+                        Color="Color.Success">@(isBusy ? "Processing" : "Pay")</MudButton>
+                </MudTooltip>
+            </div>
+        </MudItem> *@
+        @* <MudItem xs="12">
+            <MudTable Items="Order.Payments.ToList()" Dense="true" Context="PaymentsContext" Hover="true" Striped="true">
+                <ToolBarContent>
+                    <MudText Typo="@Typo.h6">Payment Details</MudText>
+                </ToolBarContent>
+                <HeaderContent>                    
+                    <MudTh>Date</MudTh>                  
+                    <MudTh>Time</MudTh>                      
+                    <MudTh>Amount</MudTh>
+                    <MudTh>Actions</MudTh>                                                            
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Date">@PaymentsContext.PaymentDate.ToShortDateString()</MudTd>
+                    <MudTd DataLabel="Time">@PaymentsContext.PaymentDate.ToShortTimeString()</MudTd>
+                    <MudTd DataLabel="Amount">@PaymentsContext.Amount.ToString("N2")</MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudTooltip Text="Print Receipt">
+                            <MudFab Disabled="@isPrinting" Icon="@Icons.Material.Filled.Print" OnClick="@(() => PreviewReceipt())"
+                                    Size="Size.Small" IconSize="Size.Small" Color="Color.Success" />
+                        </MudTooltip>
+                    </MudTd>                    
+                </RowTemplate>
+                <GroupFooterTemplate>
+                    <MudTh Class="mud-table-cell-custom-group mud-table-cell-custom-group-footer" colspan="3">Total Mass: @PaymentsContext.Items.Sum((e) => e.Amount)</MudTh>
+                </GroupFooterTemplate>
+            </MudTable>
+        </MudItem> *@
+        <MudItem xs="12">
+            <MudTable Items="Order!.OrderDetails" Dense="true" Context="OrderDetailsContext" Hover="true"
+                    Striped="true" @bind-SelectedItem="selectedOrder" Outlined="true">
+                <ToolBarContent>
+                    <MudText Typo="@Typo.h6">Orders Details</MudText>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh>Transaction Date</MudTh>   
+                    <MudTh Style="text-align:center;">Code</MudTh>
+                    <MudTh>Product</MudTh>                                        
+                    <MudTh Style="text-align:center;">Quantity</MudTh>
+                    <MudTh Style="text-align:end;">Cost</MudTh>
+                    <MudTh Style="text-align:end;">Total</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Transaction Date">@OrderDetailsContext!.ModifiedDate</MudTd>
+                    <MudTd DataLabel="Code" Style="text-align:center;">@OrderDetailsContext!.Product!.Code!</MudTd>
+                    <MudTd DataLabel="Product">@OrderDetailsContext!.Product!.ProductName</MudTd>                                        
+                    <MudTd DataLabel="Quantity" Style="text-align:center;">@OrderDetailsContext!.Quantity</MudTd>    
+                    <MudTd DataLabel="Cost" Style="text-align:end;">@OrderDetailsContext!.UnitPrice.ToString("N2")</MudTd>                
+                    <MudTd DataLabel="Total" Style="text-align:end;">@OrderDetailsContext!.ItemPrice.ToString("N2")</MudTd>                    
+                </RowTemplate>
+            </MudTable>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <div class="d-flex align-center justify-center">
+                <MudTooltip Text="Order Page" Placement="Placement.Top">
+                    <MudFab Label="Back" OnClick="@(() => nav.NavigateTo("sales"))" Style="width:200px;" Color="Color.Dark"/>
+                </MudTooltip>                
+            </div>
+        </MudItem>
+    </MudGrid>
+}
+
+
+@code {
+
+    bool isBusy, isSendSMS, IsLoading, isSending, isPrinting = false;
+    private string progressVisibility => isBusy ? "visibility: visible;" : "visibility: collapse;";
+    private string PaymentMode { get; set; } = "Cash";
+    [Parameter] public Guid orderid { get; set; }
+    private Order Order = new();
+    private List<OrderDetails>? OrderDetails;
+    private OrderDetails? selectedOrder;
+    private Guid _selectedUser;
+
+    public Guid SelectedUser
+    {
+        get { return _selectedUser; }
+        set { _selectedUser = value; }
+    }
+
+    private decimal NewPay, Balance, OBalance, SubTotal = 0;
+    private int ItemCount = 0;
+    private string sendSMS => isSendSMS ? "visibility: visible;" : "visibility: hidden;";
+    private string smsProgressVisibility => isSending ? "visibility: visible; border-top-left-radius:2em; border-top-right-radius:2em;" : "visibility: hidden;";
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsLoading = true;
+        Order = await OrderService.GetOrder(orderid);    
+        Balance = Order.Balance;
+        SubTotal = Order.SubTotal;     
+        OBalance = await CustomerService.GetOutStandingBalance(Order.CustomerID);
+        IsLoading = false;
+    }    
+
+    private async ValueTask<bool> Confirmation(string msg)
+    {
+        bool? result = await Dialog.ShowMessageBox("Confirmation", msg,
+               yesText: "Yes", cancelText: "No");
+        if (result is null)
+            return false;
+
+        return true;
+    }
+        
+    private void AmountValueChanged(decimal value)
+    {
+        decimal result;
+        bool isDecimal = decimal.TryParse(value.ToString(), out result);
+        if (!isDecimal)
+        {
+            snackBar.Add("Amount should be in numeric", Severity.Error);
+            return;
+        }
+
+        if (result > Balance)
+        {
+            snackBar.Add("Amount should'nt be greater than remaining balance", Severity.Warning);
+            return;
+        }
+
+        NewPay = result;
+    }
+
+    private async ValueTask UpdatePayment()
+    {
+        isBusy = true;
+        decimal result;
+        bool isDecimal = decimal.TryParse(NewPay.ToString(), out result);
+        if (!isDecimal)
+        {
+            snackBar.Add("Amount should be in numeric", Severity.Error);
+            isBusy = false;
+            return;
+        }
+
+        if (result > Balance)
+        {
+            snackBar.Add("Amount should'nt be greater than remaining balance", Severity.Warning);
+            isBusy = false;
+            return;
+        }
+
+        if (result <= 0)
+        {
+            snackBar.Add("Enter valid amount to proceed!", Severity.Warning);
+            isBusy = false;
+            return;
+        }
+
+        NewPay = result;
+
+        bool prompt = await Confirmation("Do you wish save");
+        if (!prompt)
+            return;
+                    
+        Order.AmountPaid += NewPay;
+        Order.PaymentMode = PaymentMode;         
+        bool isSuccess = await OrderService.UpdateOrder(Order);
+        if (!isSuccess)
+        {
+            snackBar.Add("Error Occured!", Severity.Error);
+            isBusy = false;
+            return;
+        }
+        await OrderService.GetReceipt(Order, NewPay); 
+        var payment = new OrderPayment
+        {
+            Id = Guid.NewGuid(),
+            OrderID = Order.Id,
+            PaymentDate = DateTime.Now,
+            Amount = NewPay
+        };
+        await OrderService.UpdatePayment(payment);
+        snackBar.Add("Payment Updated successfully", Severity.Success);        
+        isBusy = false;
+        NewPay = 0;
+        await OnInitializedAsync();
+    }
+
+    private async Task PreviewReceipt()
+    {
+        try
+        {
+            isPrinting = true;
+            if (await _localStorage.GetItemAsync<bool>("mode"))
+            {
+                snackBar.Add("Function in progress", Severity.Info);
+                //await orderService.GetReceipt(order.OrderId);
+            }            
+            else
+            {
+                snackBar.Add("Report is not ready on Offline mode", Severity.Info);
+                @* var receipt = await reports.GenerateReceipt(order);
+                await reports.GetReceipt(receipt);     *@
+            }
+            isPrinting = false;            
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+}

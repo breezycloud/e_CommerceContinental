@@ -1,0 +1,156 @@
+@page "/sales"
+@layout AppLayout
+@inject ILocalStorageService localStorage
+@inject IProductOrderService OrderService
+@* @inject IReportService reports *@
+@inject IJSRuntime jsRuntime
+@* @inject IBranchService branchService *@
+@attribute [Authorize]
+
+
+<MudText Typo="Typo.h5">Manage Orders</MudText>
+@if (lstOrders is null)
+{
+    <Loader/>    
+}
+else
+{    
+    <MudTable Items="@lstOrders" Dense="true" Hover="true" Striped="true" Virtualize="true"
+        Filter="new Func<CustomerWithOrder, bool>(FilterFunc)" Outlined="true">
+        <ToolBarContent>
+            <MudSpacer />
+            <MudStack Row="true" Spacing="2" Justify="Justify.SpaceEvenly">
+                <MudTextField @bind-Value="searchString" Placeholder="Search" Immediate="true"
+                    Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                    <AuthorizeView Roles="Master, Admin" Context="MasterContext">
+                        @* <div class="d-flex align-center justify-end">                            
+                        </div> *@
+                        <MudTooltip Duration="1000" Text="Print Report">
+                            <MudIconButton Color="Color.Dark" OnClick="ReportsDialog" Icon="@Icons.Material.Filled.Print" Size="Size.Medium" Class="mt-3"/>
+                        </MudTooltip>
+                    </AuthorizeView>    
+            </MudStack>            
+        </ToolBarContent>
+        <HeaderContent>         
+            <MudTh>Customer</MudTh>
+            <MudTh Style="text-align:center;">Receipt #</MudTh>                        
+            <MudTh>Date</MudTh>            
+            <MudTh Style="text-align:end;">Sub Total</MudTh>
+            <MudTh Style="text-align:end;">Total</MudTh>
+            <MudTh Style="text-align:end;">Discount</MudTh>        
+            <MudTh Style="text-align:end;">Paid</MudTh>
+            @* <MudTh Style="text-align:end;">Balance</MudTh> *@
+            <MudTh Style="text-align:center;">Actions</MudTh>            
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Customer">@context.Customer</MudTd>            
+            <MudTd DataLabel="Receipt #" Style="text-align:center;">@context.ReceiptNo</MudTd>            
+            <MudTd DataLabel="Date">@context.OrderDate.ToShortDateString()</MudTd>
+            <MudTd DataLabel="Sub Total" Style="text-align:end;">@context.SubTotal.ToString("N2")</MudTd>
+            <MudTd DataLabel="Total" Style="text-align:end;">@context.TotalAmount.ToString("N2")</MudTd>
+            <MudTd DataLabel="Discount" Style="text-align:end;">@context.Discount.ToString("N2")</MudTd>            
+            <MudTd DataLabel="Paid" Style="text-align:end;">@context.AmountPaid.ToString("N2")</MudTd>
+            @* <MudTd DataLabel="Balance" Style="text-align:end;">@context.Balance.ToString("N2")</MudTd> *@
+            <MudTd DataLabel="Actions" Style="text-align:center;">
+                <MudTooltip Text="Manage Order">
+                    <MudFab Icon="@Icons.Material.Filled.Edit" OnClick="@(() => NavigateMenu($"/manageorder/{context.OrderId}"))"
+                            Size="Size.Small" IconSize="Size.Small" Color="Color.Secondary" />
+                </MudTooltip>
+                <MudTooltip Text="Print Receipt">
+                    <MudFab Disabled="@isPrinting" Icon="@Icons.Material.Filled.Print" OnClick="@(() => PreviewReceipt(@context))"
+                            Size="Size.Small" IconSize="Size.Small" Color="Color.Success" />
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>        
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+    <div class="fabs-container">
+        <AuthorizeView Roles="Sales">
+            <MudFab Class="fab" Color="Color.Primary" @onclick="@(() => NavigateMenu("newsale"))" Icon="@Icons.Material.Filled.Add" />        
+        </AuthorizeView>        
+        @* <ul class="fab-options">
+            <li>
+                <MudTooltip Text="New Order">
+                    <MudFab @onclick="@(() => NavigateMenu("CreateOrder"))" Class="fab" Color="Color.Info" Icon="@Icons.Material.Filled.Edit" />        
+                </MudTooltip>
+            </li>
+            <AuthorizeView Roles="Admin, Manager">
+                <li>
+                    <MudTooltip Text="Report">
+                        <MudFab @onclick="ReportsDialog" Color="Color.Secondary" Icon="@Icons.Material.Filled.Print" Label="Reports" />
+                    </MudTooltip>
+                </li>
+            </AuthorizeView>            
+        </ul> *@
+    </div>
+}
+
+@code {
+
+    private bool dense = true;
+    private bool hover = true;
+    private bool striped = false;
+    private bool bordered, isPrinting = false;
+    private string searchString = "";
+    private CustomerWithOrder? selectedOrder = new();
+    private CustomerWithOrder[]? lstOrders;
+
+    protected override async Task OnInitializedAsync()
+    {
+        @* Guid BranchID = await branchService.GetBranchID();    *@
+        lstOrders = await OrderService.GetCustomerWithOrders();
+        if (lstOrders.Any())
+            AppState!.Orders = lstOrders;
+    }
+
+    @* private void ShowOrderDetails(Guid orderId)
+    {
+        CustomerWithOrder tempOrder = lstOrders.First(o => o.OrderId == orderId);
+        tempOrder.ShowDetails = !tempOrder.ShowDetails;
+    } *@
+
+    private bool FilterFunc(CustomerWithOrder order)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (order!.Customer!.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (order.OrderDate.ToShortDateString().Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (order!.ReceiptNo!.ToString().Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+
+    private void NavigateMenu(string page) => 
+        nav.NavigateTo(page);
+
+    private async Task PreviewReceipt(CustomerWithOrder order)
+    {
+        try
+        {
+            isPrinting = true;
+            var Order = await OrderService.GetOrder(order.OrderId);
+            AppState!.ReportDataModel!.PrevPage = "sales";
+            AppState!.ReportDataModel!.Employee = Order.Employee;
+            AppState!.ReportDataModel!.Customer = Order.Customer;            
+            AppState!.ReportDataModel.Order =  Order;
+            AppState!.Rows = Order.OrderDetails.Select(x => new CartRow
+            {
+                Product = x.Product,
+                Quantity = x.Quantity,
+                UnitPrice = x.UnitPrice
+            }).ToList();
+            nav.NavigateTo("receipt");                    
+            isPrinting = false;            
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+
+    private void ReportsDialog() => Dialog.Show<OrderReportDialog>("Transactions Report", options:new DialogOptions { CloseButton = true, CloseOnEscapeKey = true});
+}

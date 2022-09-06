@@ -1,0 +1,8 @@
+.grid-scroll {
+    position: relative;
+}
+@media screen and (max-height: 450px) {
+    .grid-scroll {
+        overflow-y: auto !important;
+    }
+}

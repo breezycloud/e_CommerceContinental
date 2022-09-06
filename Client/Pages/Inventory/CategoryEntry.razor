@@ -1,0 +1,85 @@
+@using Handlers
+@inject IProductService ProductService
+
+<EditForm Model="Category" OnValidSubmit="Save">
+    <DataAnnotationsValidator/>    
+    <MudDialog>
+        <TitleContent>
+            <MudText>@string.Format("{0} Category", isAdd ? "Add" : "Edit")</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Category.CategoryName" Label="Item Name" Margin="Margin.Dense" Variant="Variant.Text" For="@(() => Category.CategoryName)"></MudTextField>      
+                </MudItem>
+                <MudItem xs="12">                        
+                    <MudTextField @bind-Value="Category.Description" Label="Description" Lines="4" Variant="Variant.Text"></MudTextField>      
+                </MudItem>                      
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel">Close</MudButton>
+            <MudButton Disabled="isProcessing"ButtonType="ButtonType.Submit" Variant="Variant.Filled" 
+                Color="Color.Primary" >@(isProcessing ? "Processing" : "Save")</MudButton>
+        </DialogActions>
+    </MudDialog>    
+</EditForm>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }  = default!;
+    [Parameter] public Category Category { get; set; } = new();            
+    [Parameter] public bool isAdd { get; set; } = true;
+    private bool isProcessing = false;  
+    private HubConnection? hub;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        hub = new HubConnectionBuilder().WithUrl(nav.ToAbsoluteUri("/hubs")).Build();
+        await hub.StartAsync();            
+    }
+    void Cancel() => nav.NavigateTo("categories");
+    async Task Save()
+    {
+        isProcessing = true;
+        var result = await Dialog.ShowMessageBox("Confirmation",
+        $"Do you wish to save", yesText: "Yes", cancelText: "No");
+        if (result is null)
+        {
+            isProcessing= false;
+            return;        
+        }
+        else if (!result.Value)
+        {
+            isProcessing = false;
+            return;
+        }        
+        try
+        {      
+            Category.CategoryName = StringConverter.ConvertToTitleCase(Category.CategoryName!);
+            Category.Description = string.IsNullOrEmpty(Category.Description) ? "" : StringConverter.ConvertToTitleCase(Category.Description);
+            bool isDone = false;
+            if (isAdd)                           
+            {
+                isDone = await ProductService.AddCategory(Category); 
+                Category =new(); 
+            }
+            else
+                isDone = await ProductService.EditCategory(Category.Id, Category);
+            
+            if (isDone)
+            {
+                snackBar.Add("Category Successfully Saved", Severity.Success);      
+                await hub!.SendAsync("UpdateCategoryTable");                                                                
+            }                
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{ex.Message} {ex.InnerException} {ex.StackTrace} {ex.Source}");
+            snackBar.Add("Operation failed", Severity.Error);            
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }    
+}
