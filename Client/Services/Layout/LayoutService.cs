@@ -31,7 +31,7 @@ public class LayoutService
         }
         else
         {
-            IsDarkMode = isDarkModeDefaultTheme;
+            IsDarkMode = !isDarkModeDefaultTheme ? false : true;
             _userPreferences = new UserPreferences { DarkTheme = IsDarkMode} ;
             await _userPreferencesService.SaveUserPreferences(_userPreferences);
         }
